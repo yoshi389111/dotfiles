@@ -69,9 +69,10 @@ __prompt_show_exitcode() {
     if [[ ${#status[@]} -ne "$i + 1" ]]; then
       echo -n ","
     fi
-    echo ""
   done
+  echo ""
 }
+set -o pipefail
 PROMPT_COMMAND="__prompt_show_exitcode;${PROMPT_COMMAND//__prompt_show_exitcode;/}"
 
 __distinct_path() {
