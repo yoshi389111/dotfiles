@@ -1,0 +1,100 @@
+
+# for shell history
+HISTCONTROL=ignoreboth
+shopt -s histappend
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# refresh screen size(LINE,COLUMN)
+shopt -s checkwinsize
+
+set -o vi
+
+# for less
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+if [ -x /usr/bin/dircolors ]; then
+  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+  alias ls='ls --color=auto'
+  alias grep='grep --color=auto'
+  alias fgrep='fgrep --color=auto'
+  alias egrep='egrep --color=auto'
+fi
+
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+if [ -f ~/.bash_aliases ]; then
+  . ~/.bash_aliases
+fi
+
+# for bash-completion
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+# for secret info
+if [ -f ~/.bashrc.private ]; then
+  . ~/.bashrc.private
+fi
+
+__prompt_show_exitcode() {
+  local status=(${PIPESTATUS[@]})
+  local has_error=0
+  local i
+  for i in ${!status[@]}; do
+    if [[ ${status[$i]} -ne 0 ]]; then
+      has_error=1
+      break
+    fi
+  done
+  if [[ $has_error -eq 0 ]]; then
+    return 0
+  fi
+  echo -n "exited "
+  for i in ${!status[@]}; do
+    local rc="${status[$i]}"
+    echo -n "$rc"
+    if [[ $rc -gt 128 ]]; then
+      local signame="$(kill -l $((rc - 128)) 2>&-)"
+      if [[ $? -eq 0 ]]; then
+        echo -n "SIG(${signame})"
+      fi
+    fi
+    if [[ ${#status[@]} -ne "$i + 1" ]]; then
+      echo -n ","
+    fi
+    echo ""
+  done
+}
+PROMPT_COMMAND="__prompt_show_exitcode;${PROMPT_COMMAND//__prompt_show_exitcode;/}"
+
+__distinct_path() {
+  local work="$1"
+  work="${work//%/%25}"
+  work="${work// /%20}"
+
+  local new_path=""
+  local p
+  for p in ${work//:/ }; do
+    case ":${new_path}:" in
+      *:"${p}":*) ;;
+      ::) new_path="$p" ;;
+      *) new_path="$new_path:$p" ;;
+    esac
+  done
+
+  work="${new_path//%20/ }"
+  work="${work//%25/%}"
+  echo "$work"
+}
+export PATH="$(__distinct_path "$PATH")"
+unset -f __distinct_path
+
+# prompt
+PS1='$ '

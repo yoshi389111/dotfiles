@@ -1,0 +1,13 @@
+[user]
+	name = sato yoshiyuki
+	email = yoshi.389111@gmail.com
+[core]
+	autocrlf = false
+	ignorecase = false
+	quotepath = false
+	editor = vi
+[color]
+	ui = true
+[init]
+	defaultBranch = main
+	templatedir = ~/.git_template
