@@ -63,7 +63,7 @@ __prompt_show_exitcode() {
     if [[ $rc -gt 128 ]]; then
       local signame="$(kill -l $((rc - 128)) 2>&-)"
       if [[ $? -eq 0 ]]; then
-        echo -n "SIG(${signame})"
+        echo -n "(SIG${signame})"
       fi
     fi
     if [[ ${#status[@]} -ne "$i + 1" ]]; then
