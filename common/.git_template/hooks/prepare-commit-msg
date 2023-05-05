@@ -23,7 +23,7 @@ case "$COMMIT_SOURCE" in
       init) add_emoji ":tada:" ;;
       refact) add_emoji ":recycle:" ;;
       fix) add_emoji ":lady_beetle:" ;;
-      feat) add_emoji ":sparkles:" ;;
+      feat|new) add_emoji ":sparkles:" ;;
       doc) add_emoji ":memo:" ;;
       typo) add_emoji ":pencil2:" ;;
       perf) add_emoji ":zap:" ;;
