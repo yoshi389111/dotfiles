@@ -1,13 +1,16 @@
 # makefile for dotfiles
+# ref. https://postd.cc/auto-documented-makefile/
 
-.PHONY: update
-update:
-	script/update.sh
-
-.PHONY: install
-install:
-	script/install.sh
-
+.DEFAULT_GOAL = help
+help: ## Show help message
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 .PHONY: help
-help:
-	echo
+
+update: ## Update symlinks
+	script/update.sh
+.PHONY: update
+
+install: ## Overwrite files and create symlinks
+	script/install.sh
+.PHONY: install
+
