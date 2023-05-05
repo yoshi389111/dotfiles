@@ -7,10 +7,10 @@ help: ## Show help message
 .PHONY: help
 
 update: ## Update symlinks
-	script/update.sh
+	scripts/update.sh
 .PHONY: update
 
 install: ## Overwrite files and create symlinks
-	script/install.sh
+	scripts/install.sh
 .PHONY: install
 
