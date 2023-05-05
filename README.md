@@ -5,3 +5,10 @@
 ```
 make install
 ```
+
+## update
+
+```
+make update
+```
+
