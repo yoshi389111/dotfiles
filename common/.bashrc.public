@@ -45,54 +45,40 @@ fi
 
 __prompt_show_exitcode() {
   local status=(${PIPESTATUS[@]})
-  local has_error=0
-  local i
-  for i in ${!status[@]}; do
-    if [[ ${status[$i]} -ne 0 ]]; then
-      has_error=1
-      break
-    fi
-  done
-  if [[ $has_error -eq 0 ]]; then
+  if [[ "${status[*]}" =~ ^0( 0)*$ ]]; then
     return 0
   fi
-  echo -n "exited "
+  echo -en "\033[33mexited "
+  local i
   for i in ${!status[@]}; do
     local rc="${status[$i]}"
     echo -n "$rc"
     if [[ $rc -gt 128 ]]; then
-      local signame="$(kill -l $((rc - 128)) 2>&-)"
+      local signame="SIG$(kill -l "$rc" 2>&-)"
       if [[ $? -eq 0 ]]; then
-        echo -n "(SIG${signame})"
+        echo -n "(${signame})"
       fi
     fi
     if [[ ${#status[@]} -ne "$i + 1" ]]; then
       echo -n ","
     fi
   done
-  echo ""
+  echo -e "\033[m"
 }
-set -o pipefail
 PROMPT_COMMAND="__prompt_show_exitcode;${PROMPT_COMMAND//__prompt_show_exitcode;/}"
 
 __distinct_path() {
-  local work="$1"
-  work="${work//%/%25}"
-  work="${work// /%20}"
-
-  local new_path=""
-  local p
-  for p in ${work//:/ }; do
-    case ":${new_path}:" in
-      *:"${p}":*) ;;
-      ::) new_path="$p" ;;
-      *) new_path="$new_path:$p" ;;
+  local ifs=IFS paths="" path
+  IFS=':'
+  for path in $1; do
+    case ":$paths:" in
+      *:"$path":*) ;;
+      ::) paths="$path" ;;
+      *) paths="$paths:$path" ;;
     esac
   done
-
-  work="${new_path//%20/ }"
-  work="${work//%25/%}"
-  echo "$work"
+  IFS=ifs
+  echo "$paths"
 }
 export PATH="$(__distinct_path "$PATH")"
 unset -f __distinct_path
