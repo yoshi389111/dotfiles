@@ -48,20 +48,20 @@ __prompt_show_exitcode() {
   if [[ "${status[*]}" =~ ^0( 0)*$ ]]; then
     return 0
   fi
-  local msg="exited " rc
-  for rc in "${status[@]}"; do
+  local msg="exited " ex
+  for ex in "${status[@]}"; do
     local name=""
-    if [[ $rc -gt 128 ]]; then
-      name="$(kill -l "$rc" 2>&-)"
+    if [[ $ex -gt 128 ]]; then
+      name="$(kill -l "$ex" 2>&-)"
       if [[ $name != "" ]]; then
         name="(SIG${name})"
       fi
-    elif [[ $rc == 127 ]]; then
+    elif [[ $ex == 127 ]]; then
       name="(not found)"
-    elif [[ $rc == 126 ]]; then
+    elif [[ $ex == 126 ]]; then
       name="(not executable)"
     fi
-    msg="${msg}${rc}${name},"
+    msg="${msg}${ex}${name},"
   done
   echo -e "\033[33m${msg%,}\033[m"
 }
