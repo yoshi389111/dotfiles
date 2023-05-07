@@ -64,7 +64,7 @@ __prompt_show_exitcode() {
 PROMPT_COMMAND="__prompt_show_exitcode;${PROMPT_COMMAND//__prompt_show_exitcode;/}"
 
 __distinct_path() {
-  local ifs=IFS paths="" path
+  local ifs="$IFS" paths="" path
   IFS=':'
   for path in $1; do
     case ":$paths:" in
@@ -73,7 +73,7 @@ __distinct_path() {
       *) paths="$paths:$path" ;;
     esac
   done
-  IFS=ifs
+  IFS="$ifs"
   echo "$paths"
 }
 export PATH="$(__distinct_path "$PATH")"
