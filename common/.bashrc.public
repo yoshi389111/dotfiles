@@ -54,9 +54,9 @@ __prompt_show_exitcode() {
     local rc="${status[$i]}"
     echo -n "$rc"
     if [[ $rc -gt 128 ]]; then
-      local signame="SIG$(kill -l "$rc" 2>&-)"
-      if [[ $? -eq 0 ]]; then
-        echo -n "(${signame})"
+      local name="$(kill -l "$rc" 2>&-)"
+      if [[ $name != "" ]]; then
+        echo -n "(SIG${name})"
       fi
     fi
     if [[ ${#status[@]} -ne "$i + 1" ]]; then
