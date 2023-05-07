@@ -63,7 +63,7 @@ __prompt_show_exitcode() {
 }
 PROMPT_COMMAND="__prompt_show_exitcode;${PROMPT_COMMAND//__prompt_show_exitcode;/}"
 
-__distinct_path() {
+__deduplication_path() {
   local ifs="$IFS" paths="" path
   IFS=':'
   for path in $1; do
@@ -76,8 +76,8 @@ __distinct_path() {
   IFS="$ifs"
   echo "$paths"
 }
-export PATH="$(__distinct_path "$PATH")"
-unset -f __distinct_path
+export PATH="$(__deduplication_path "$PATH")"
+unset -f __deduplication_path
 
 # prompt
 PS1='$ '
