@@ -44,26 +44,22 @@ if [ -f ~/.bashrc.private ]; then
 fi
 
 __prompt_show_exitcode() {
-  local status=(${PIPESTATUS[@]})
+  local status=("${PIPESTATUS[@]}")
   if [[ "${status[*]}" =~ ^0( 0)*$ ]]; then
     return 0
   fi
-  echo -en "\033[33mexited "
-  local i
-  for i in ${!status[@]}; do
-    local rc="${status[$i]}"
-    echo -n "$rc"
+  local msg="exited " rc
+  for rc in "${status[@]}"; do
+    local name=""
     if [[ $rc -gt 128 ]]; then
-      local name="$(kill -l "$rc" 2>&-)"
+      name="$(kill -l "$rc" 2>&-)"
       if [[ $name != "" ]]; then
-        echo -n "(SIG${name})"
+        name="(SIG${name})"
       fi
     fi
-    if [[ ${#status[@]} -ne "$i + 1" ]]; then
-      echo -n ","
-    fi
+    msg="${msg}${rc}${name},"
   done
-  echo -e "\033[m"
+  echo -e "\033[33m${msg%,}\033[m"
 }
 PROMPT_COMMAND="__prompt_show_exitcode;${PROMPT_COMMAND//__prompt_show_exitcode;/}"
 
