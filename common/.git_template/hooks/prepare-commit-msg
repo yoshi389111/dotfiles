@@ -31,6 +31,7 @@ case "$COMMIT_SOURCE" in
       delete|del) add_emoji ":fire:" ;;
       image|img) add_emoji ":camera:" ;;
       upgrade) add_emoji ":rocket:" ;;
+      test) add_emoji ":white_check_mark:" ;;
     esac
     ;;
   merge) # merge or `.git/MERGE_MSG` exists
