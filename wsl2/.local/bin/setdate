@@ -1,0 +1,8 @@
+#!/bin/sh
+# Align WSL time offset with hardware clock.
+#
+# usage: setdate
+
+date
+sudo hwclock --hctosys
+date
