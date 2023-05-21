@@ -4,5 +4,4 @@ case "$-" in
  *) return;;
 esac
 
-# for dotfiles
 . ~/.bashrc.public
