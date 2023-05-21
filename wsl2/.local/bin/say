@@ -1,0 +1,26 @@
+#!/bin/bash
+# command to speak for WSL/PowerShell
+
+# search powershell
+# - pwsh.exe (ver 7.x)
+# - powershell.exe (ver 5.x)
+pwsh=""
+for pwshexe in pwsh.exe powershell.exe; do
+    if type "$pwshexe" > /dev/null 2>&1; then
+        pwsh="$pwshexe"
+        break
+    fi
+done
+
+if [[ "$pwsh" = "" ]]; then
+    echo "Speech engine not found." 1>&2
+    exit 1
+fi
+
+args="${*//\'/ }"
+
+# ref.
+# https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms723602(v=vs.85)
+command="(New-Object -com SAPI.SpVoice).Speak('$args')"
+
+"$pwsh" -command "$command" > /dev/null

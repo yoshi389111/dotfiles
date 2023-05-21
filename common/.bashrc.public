@@ -38,6 +38,11 @@ if ! shopt -oq posix; then
   fi
 fi
 
+# for PowerShell 7.x (`pwsh.exe`) in WSL
+if [ -d '/mnt/c/Program Files/PowerShell/7' ]; then
+  PATH="$PATH:/mnt/c/Program Files/PowerShell/7"
+fi
+
 # for secret info
 if [ -f ~/.bashrc.private ]; then
   . ~/.bashrc.private
