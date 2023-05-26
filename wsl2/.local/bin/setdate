@@ -3,6 +3,9 @@
 #
 # usage: setdate
 
+# sudo apt install ntpdate
+
 date
-sudo hwclock --hctosys
+#sudo hwclock --hctosys
+sudo ntpdate ntp.nict.jp
 date
