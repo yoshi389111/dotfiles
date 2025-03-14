@@ -2,6 +2,6 @@
 # Change file timestamp to author date.
 
 for FILE in $(git ls-files); do
-  TIME=$(git log -1 --date=format-local:"%Y%m%d%H%M%S" --pretty=format:"%ad" "${FILE}")
+  TIME=$(git log -1 --date=format-local:"%Y%m%d%H%M.%S" --pretty=format:"%ad" "${FILE}")
   touch -t "${TIME}" "${FILE}"
 done
