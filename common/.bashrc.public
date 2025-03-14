@@ -43,10 +43,24 @@ if [ -d '/mnt/c/Program Files/PowerShell/7' ]; then
   PATH="$PATH:/mnt/c/Program Files/PowerShell/7"
 fi
 
+# for golang
+if [ -d '/usr/local/go/bin' ]; then
+  PATH="$PATH:/usr/local/go/bin"
+fi
+
+
 # for secret info
 if [ -f ~/.bashrc.private ]; then
   . ~/.bashrc.private
 fi
+
+# for hdr command
+# ref. https://qiita.com/ko1nksm/items/d4200a3b35800670c28d
+hdr() {
+  ( IFS= read -r REPLY && printf '%s\n' "$REPLY" )
+  "$@"
+}
+alias hdr="hdr "
 
 __prompt_show_exitcode() {
   local status=("${PIPESTATUS[@]}")
