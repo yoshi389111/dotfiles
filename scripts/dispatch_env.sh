@@ -32,6 +32,13 @@ elif [[ "$SYS_NAME" = 'Linux' ]]; then
     : # other Linux
   fi
 
+  # npm completion
+  if command -v npm >/dev/null; then
+    mkdir -p ~/.local/share/bash-completion/completions
+    npm completion > ~/.local/share/bash-completion/completions/npm
+  fi
+
+
 elif [[ "$SYS_NAME" == MINGW* && -d "$BASE_DIR/mingw" ]]; then
   # MinGW (e.g. git for windows)
   "$SCRIPT_PATH" "$BASE_DIR/mingw"
