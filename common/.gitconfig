@@ -1,6 +1,7 @@
 [user]
 	name = sato yoshiyuki
 	email = yoshi.389111@gmail.com
+	signingkey = ~/.ssh/id_ed25519.pub
 [core]
 	autocrlf = false
 	ignorecase = false
@@ -11,3 +12,7 @@
 [init]
 	defaultBranch = main
 	templatedir = ~/.git_template
+[gpg]
+	format = ssh
+[commit]
+	gpgsign = true
