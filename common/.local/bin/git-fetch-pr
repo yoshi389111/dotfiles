@@ -1,0 +1,21 @@
+#!/bin/sh
+# usage: git fetch-pr PULL-REQUEST-ID
+
+if [ "$#" -ne 1 ]; thne
+    echo "usage: git fetch-pr PULL-REQUEST-ID" >&2
+    exit 1
+fi
+
+ID="$1"
+
+case "$ID" in
+  ''|*[!0-9]*)
+    echo "invalid pull-request-id $1" >&2
+    exit 1
+    ;;
+esac
+
+BRANCH_NAME="pr$ID"
+
+git fetch origin "pull/$ID/head:$BRANCH_NAME"
+git switch "$BRANCH_NAME"
