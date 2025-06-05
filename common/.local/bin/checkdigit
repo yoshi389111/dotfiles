@@ -3,8 +3,14 @@ import sys
 import re
 import os
 
-VERSION="1.0.0"
-VER_DATE="2025-05-21"
+VERSION = "1.0.1"
+START_DATE = "2025-05-21"
+VERSION_DATE = "2025-06-05"
+
+
+def to_digits(digits_str: str):
+    """Convert string to list of ints."""
+    return [int(d) for d in digits_str]
 
 
 def print_usage(file):
@@ -15,12 +21,17 @@ def print_usage(file):
 
 def print_version(file):
     basename = os.path.basename(sys.argv[0])
-    print('@(#)$Header: {} {} {} yoshi389111 Exp $'.format(basename, VERSION, VER_DATE), file=file)
+    print(
+        '@(#)$Header: {} {} {}/{} yoshi389111 Exp $'.format(
+            basename, VERSION, START_DATE, VERSION_DATE
+        ),
+        file=file
+    )
 
 
 def calculate_luhn_check_digit(digits_str: str) -> str:
     """Luhn algorithm."""
-    digits = [int(d) for d in digits_str]
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
@@ -35,8 +46,8 @@ def calculate_luhn_check_digit(digits_str: str) -> str:
 
 
 def calculate_m10w21_check_digit(digits_str: str) -> str:
-    """Modulus 10 with wights 2 and 1 (non-Luhn)"""
-    digits = [int(d) for d in digits_str]
+    """Modulus 10 with weights 2 and 1 (non-Luhn)"""
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
@@ -50,8 +61,8 @@ def calculate_m10w21_check_digit(digits_str: str) -> str:
 
 
 def calculate_m10w31_check_digit(digits_str: str) -> str:
-    """Modulus 10 with wights 3 and 1."""
-    digits = [int(d) for d in digits_str]
+    """Modulus 10 with weights 3 and 1."""
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
@@ -65,36 +76,39 @@ def calculate_m10w31_check_digit(digits_str: str) -> str:
 
 
 def calculate_m11w27_check_digit(digits_str: str) -> str:
-    """Modulus 11 with wights 2 to 7 (repeating)"""
-    digits = [int(d) for d in digits_str]
+    """Modulus 11 with weights 2 to 7 (repeating)"""
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
-        checksum += d * (i%6+2)
+        checksum += d * (i % 6 + 2)
 
     check_digit = (11 - (checksum % 11)) % 11 % 10
     return str(check_digit)
 
 
 def calculate_m11w10_check_digit(digits_str: str) -> str:
-    """Modulus 11 with wights 1 to n"""
-    digits = [int(d) for d in digits_str]
+    """Modulus 11 with weights 1 to n"""
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
-        checksum += d * ((i+1)%10)
+        checksum += d * ((i + 1) % 10)
 
     check_digit = (11 - (checksum % 11)) % 11 % 10
     return str(check_digit)
 
 
 def calculate_isbn10_check_digit(digits_str: str) -> str:
-    """old isbn-10 method"""
-    digits = [int(d) for d in digits_str]
+    """
+    old isbn-10 method.
+    ISSN check digit can also be calculated with this method.
+    """
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
-        checksum += d * (i+2)
+        checksum += d * (i + 2)
 
     check_digit = (11 - (checksum % 11)) % 11
     return str(check_digit) if check_digit < 10 else 'X'
@@ -122,7 +136,7 @@ def calculate_9dsr_check_digit(digits_str: str) -> str:
 
 def calculate_corporate_number_check_digit(digits_str: str) -> str:
     """corporate number in Japan method."""
-    digits = [int(d) for d in digits_str]
+    digits = to_digits(digits_str)
 
     checksum = 0
     for i, d in enumerate(digits[::-1]):
@@ -151,8 +165,13 @@ def check_all_checkdigit(digits: str):
     print('     9DR: {}-{}'.format(digits, calculate_9dr_check_digit(digits)))
     print('    9DSR: {}-{}'.format(digits, calculate_9dsr_check_digit(digits)))
     if len(digits) == 12:
+        # The check digit of Japanese Corporate Number is prepended.
         print('  Corporate Number in Japan:')
-        print('          {}-{}'.format(calculate_corporate_number_check_digit(digits), digits))
+        print(
+            '          {}-{}'.format(
+                calculate_corporate_number_check_digit(digits), digits
+            )
+        )
 
 
 def main():
@@ -160,7 +179,7 @@ def main():
         print_usage(sys.stderr)
         sys.exit(1)
 
-    if sys.argv[1] == '-v' or sys.argv[1] == '--version':
+    if sys.argv[1] == '-v' or sys.argv[1] == '-V' or sys.argv[1] == '--version':
         print_version(sys.stdout)
         sys.exit(0)
 
