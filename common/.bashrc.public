@@ -46,6 +46,7 @@ fi
 # for golang
 if [ -d '/usr/local/go/bin' ]; then
   PATH="$PATH:/usr/local/go/bin"
+  PATH="$PATH:$(go env GOPATH)/bin"
 fi
 
 
