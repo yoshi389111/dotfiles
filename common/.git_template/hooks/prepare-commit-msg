@@ -8,10 +8,10 @@
 
 # ref. https://git-scm.com/docs/githooks
 
-readonly COMMIT_MESSAGE_FILE="$1"
-readonly COMMIT_MESSAGE="$(cat "$1")"
-readonly PREFIX="${COMMIT_MESSAGE%%:*}"
-readonly COMMIT_SOURCE="$2"
+COMMIT_MESSAGE_FILE="$1"
+COMMIT_MESSAGE="$(cat "$1")"
+PREFIX="${COMMIT_MESSAGE%%:*}"
+COMMIT_SOURCE="$2"
 
 add_emoji() {
   echo "$1 $COMMIT_MESSAGE" > "$COMMIT_MESSAGE_FILE"
@@ -24,7 +24,7 @@ case "$COMMIT_SOURCE" in
       refact) add_emoji ":recycle:" ;;
       fix) add_emoji ":lady_beetle:" ;;
       feat|new) add_emoji ":sparkles:" ;;
-      doc) add_emoji ":memo:" ;;
+      doc|docs) add_emoji ":memo:" ;;
       typo) add_emoji ":pencil2:" ;;
       perf) add_emoji ":zap:" ;;
       env|conf) add_emoji ":wrench:" ;;
