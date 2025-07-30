@@ -1,7 +1,7 @@
-#!/bin/env python3
+#!/usr/bin/env python3
 
 # Show directory tree
-# (C) 2023 SATO, Yoshiyuki
+# (C) 2023 SATO Yoshiyuki
 # This software is released under the MIT License.
 # https://opensource.org/licenses/mit-license.php
 
@@ -16,11 +16,22 @@ import sys
 from typing import List
 
 NAME = "tree.py"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 DESCRIPTION = "show directory tree."
 
-branch_file = [ [ " +- ", " `- " ], [ " ├─ ", " └─ " ]]
-branch_next = [ [ " |  ", "    " ], [ " │  ", "    " ]]
+loc = (os.environ.get("LC_ALL") or os.environ.get("LANG") or "C").lower()
+lang = loc.split('.')[0].split('_')[0]
+
+if lang in ('ja', 'zh', 'ko'):
+    branch_file = [ " ├ ", " └ " ]
+    branch_next = [ " │ ", "    " ]
+elif 'utf-8' in loc or 'utf8' in loc:
+    branch_file = [ " ├─ ", " └─ " ]
+    branch_next = [ " │  ", "    " ]
+else:
+    branch_file = [ " +- ", " `- " ]
+    branch_next = [ " |  ", "    " ]
+
 
 def arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -62,13 +73,6 @@ def arg_parser() -> argparse.ArgumentParser:
         "--symbolic-link",
         action='store_true',
         help="show symbolic link path",
-    )
-
-    parser.add_argument(
-        "-b",
-        "--box-drawing",
-        action='store_true',
-        help="use box drawing of unicode",
     )
 
     parser.add_argument(
@@ -207,14 +211,13 @@ class ShowTree:
 
     def print_tree_sub(self, path: str, branch_pat: str) -> None:
         files = self.get_dir(path)
-        draw_type = 1 if self.args.box_drawing else 0
         for i, file in enumerate(files):
             index = 1 if i == len(files) - 1 else 0
             if os.path.isdir(os.path.join(path, file)):
-                self.print_file(path, file, branch_pat + branch_file[draw_type][index])
-                self.print_tree_sub(path + "/" + file, branch_pat + branch_next[draw_type][index])
+                self.print_file(path, file, branch_pat + branch_file[index])
+                self.print_tree_sub(path + "/" + file, branch_pat + branch_next[index])
             else:
-                self.print_file(path, file, branch_pat + branch_file[draw_type][index])
+                self.print_file(path, file, branch_pat + branch_file[index])
 
     def print_tree(self, path: str) -> None:
         self.print_file("", path, "")
