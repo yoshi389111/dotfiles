@@ -8,36 +8,22 @@
 import argparse
 import datetime
 import fnmatch
-import grp
 import os
-import pwd
 import signal
+import stat
 import sys
 from typing import List
 
 NAME = "tree.py"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 DESCRIPTION = "show directory tree."
-
-loc = (os.environ.get("LC_ALL") or os.environ.get("LANG") or "C").lower()
-lang = loc.split('.')[0].split('_')[0]
-
-if lang in ('ja', 'zh', 'ko'):
-    branch_file = [ " ├ ", " └ " ]
-    branch_next = [ " │ ", "    " ]
-elif 'utf-8' in loc or 'utf8' in loc:
-    branch_file = [ " ├─ ", " └─ " ]
-    branch_next = [ " │  ", "    " ]
-else:
-    branch_file = [ " +- ", " `- " ]
-    branch_next = [ " |  ", "    " ]
 
 
 def arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
 
     parser.add_argument(
-        "DIRECTORIES", nargs='*', help="target directories"
+        "DIRECTORIES", nargs="*", default=["."], help="target directories"
     )
 
     parser.add_argument(
@@ -50,191 +36,171 @@ def arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-a",
         "--all-files",
-        action='store_true',
+        action="store_true",
         help='all file (within "dot file")',
     )
 
     parser.add_argument(
         "-d",
         "--directory-only",
-        action='store_true',
-        help='directory only',
+        action="store_true",
+        help="directory only",
     )
 
     parser.add_argument(
         "-p",
         "--show-permission",
-        action='store_true',
+        action="store_true",
         help="`ls -l' like format",
     )
 
     parser.add_argument(
         "-l",
         "--symbolic-link",
-        action='store_true',
+        action="store_true",
         help="show symbolic link path",
     )
 
     parser.add_argument(
         "-I",
         "--ignore-pattern",
-        action='append',
+        action="append",
         help="specify paths to ignore with wildcards",
         default=[],
     )
 
+    parser.add_argument(
+        "-E",
+        "--east-asian-width",
+        choices=["ascii", "always", "never", "auto"],
+        default="auto",
+        help="Specify how to handle East Asian width: ascii, always, never or auto (default: auto)",
+    )
+
     return parser
+
 
 class ShowTree:
 
     def __init__(self):
         self.args = arg_parser().parse_args()
 
-    def get_dir(self, path: str) -> List[str]:
+        if self.args.east_asian_width == "auto":
+            loc = (os.environ.get("LC_ALL") or os.environ.get("LANG") or "C").lower()
+            lang = loc.split(".")[0].split("_")[0]
+            if lang in ("ja", "zh", "ko"):
+                east_asian_width = "always"
+            elif "utf-8" in loc or "utf8" in loc:
+                east_asian_width = "never"
+            else:
+                east_asian_width = "ascii"
+        else:
+            east_asian_width = self.args.east_asian_width
+
+        if east_asian_width == "always":
+            self.prefix_file = [" ├ ", " └ "]
+            self.prefix_indent = [" │ ", "    "]
+        elif east_asian_width == "never":
+            self.prefix_file = [" ├─ ", " └─ "]
+            self.prefix_indent = [" │  ", "    "]
+        else:
+            self.prefix_file = [" +- ", " `- "]
+            self.prefix_indent = [" |  ", "    "]
+
+    def is_not_directory_if_need(self, path: str, file: str) -> bool:
+        return not self.args.directory_only or os.path.isdir(os.path.join(path, file))
+
+    def is_not_dot_file_if_need(self, file: str) -> bool:
+        return self.args.all_files or not file.startswith(".")
+
+    def is_not_ignore_pattern(self, file: str) -> bool:
+        return not any(
+            fnmatch.fnmatch(file, pattern) for pattern in self.args.ignore_pattern
+        )
+
+    def is_displayable(self, path: str, file: str) -> bool:
+        return (
+            self.is_not_directory_if_need(path, file)
+            and self.is_not_dot_file_if_need(file)
+            and self.is_not_ignore_pattern(file)
+        )
+
+    def get_entries(self, path: str) -> List[str]:
         try:
-            files = os.listdir(path)
-            if self.args.directory_only:
-                files = [f for f in files if os.path.isdir(os.path.join(path, f))]
-            if not self.args.all_files:
-                files = [f for f in files if not f.startswith(".")]
-            files = [f for f in files if not any(fnmatch.fnmatch(f, pattern) for pattern in self.args.ignore_pattern)]
-            return files
-        except PermissionError:
+            return [f for f in os.listdir(path) if self.is_displayable(path, f)]
+        except:
             return []
-
-    def str_perm(self, mode: int) -> str:
-        perm = ""
-        work = mode & 0o170000
-        if work == 0o140000:
-            perm = "s" # socket
-        elif work == 0o120000:
-            perm = "l" # symlink
-        elif work == 0o110000:
-            perm = "n" # named pipe
-        elif work == 0o100000:
-            perm = "-" # normal file
-        elif work == 0o060000:
-            perm = "b" # block device
-        elif work == 0o040000:
-            perm = "d" # directory
-        elif work == 0o020000:
-            perm = "c" # character device
-        elif work == 0o010000:
-            perm = "p" # 
-        else:
-            perm = " " # failback
-
-        perm += "r" if mode & 0o000400 else "-"
-        perm += "w" if mode & 0o000200 else "-"
-
-        work = mode & 0o004100
-        if work == 0o004100:
-            perm += "s"
-        elif work == 0o004000:
-            perm += "S"
-        elif work == 0o000100:
-            perm += "x"
-        else:
-            perm += "-"
-
-        perm += "r" if mode & 0o000040 else "-"
-        perm += "w" if mode & 0o000020 else "-"
-
-        work = mode & 0o002010
-        if work == 0o002010:
-            perm += "s"
-        elif work == 0o002000:
-            perm += "S"
-        elif work == 0o000010:
-            perm += "x"
-        else:
-            perm += "-"
-
-        perm += "r" if mode & 0o000004 else "-"
-        perm += "w" if mode & 0o000002 else "-"
-
-        work = mode & 0o001001
-        if work == 0o001001:
-            perm += "t"
-        elif work == 0o001000:
-            perm += "T"
-        elif work == 0o000001:
-            perm += "x"
-        else:
-            perm += "-"
-
-        return perm
 
     def get_user_name(self, uid: int) -> str:
         try:
+            import pwd
+
             info = pwd.getpwuid(uid)
             return info.pw_name
-        except ImportError:
+        except:
             return str(uid)
 
     def get_group_name(self, gid: int) -> str:
         try:
+            import grp
+
             info = grp.getgrgid(gid)
             return info.gr_name
-        except ImportError:
+        except:
             return str(gid)
 
     def print_ls_format(self, filename: str) -> None:
-        stat = os.stat(filename)
-        perm = self.str_perm(stat.st_mode)
+        fstat = os.stat(filename)
+        perm = stat.filemode(fstat.st_mode)
+        user_name = self.get_user_name(fstat.st_uid)
+        group_name = self.get_group_name(fstat.st_gid)
+        update_time = datetime.datetime.fromtimestamp(fstat.st_mtime)
+
         print(perm + " ", end="")
-
         print(
-            "{:10s} {:10s}".format(
-                self.get_user_name(stat.st_uid),
-                self.get_group_name(stat.st_gid)),
-            end="")
-
-        if (stat.st_mode&0o060000)==0o060000 or (stat.st_mode&0o020000)==0o020000:
-            print("0x{:08x} ".format(stat.st_dev), end="")
+            "{:10s} {:10s}".format(user_name, group_name),
+            end="",
+        )
+        if stat.S_ISBLK(fstat.st_mode) or stat.S_ISCHR(fstat.st_mode):
+            print("0x{:08x} ".format(fstat.st_dev), end="")
         else:
-            print(" {:9d} ".format(stat.st_size), end="")
-        update_time = datetime.datetime.fromtimestamp(stat.st_mtime)
-        print(update_time.strftime('%Y-%m-%d %H:%M:%S '), end="")
+            print(" {:9d} ".format(fstat.st_size), end="")
+        print(update_time.strftime("%Y-%m-%d %H:%M:%S "), end="")
 
-    def print_file(self, dir: str, filename: str, branch_pat: str) -> None:
-        fullpath = (dir + "/" + filename) if len(dir) != 0 else filename
+    def print_file(self, dir: str, filename: str, prefix: str) -> None:
+        fullpath = os.path.join(dir, filename)
         if self.args.show_permission:
             self.print_ls_format(fullpath)
-        print(branch_pat, end="")
-        if os.path.isdir(fullpath) and not filename.endswith("/"):
-            filename += "/"
+        print(prefix, end="")
+        if os.path.isdir(fullpath) and not filename.endswith(os.sep):
+            filename += os.sep
         print(filename, end="")
         if self.args.symbolic_link and os.path.islink(fullpath):
             print(" -> " + os.readlink(fullpath), end="")
         print()
 
-    def print_tree_sub(self, path: str, branch_pat: str) -> None:
-        files = self.get_dir(path)
+    def print_tree_sub(self, path: str, prefix: str) -> None:
+        files = self.get_entries(path)
         for i, file in enumerate(files):
-            index = 1 if i == len(files) - 1 else 0
-            if os.path.isdir(os.path.join(path, file)):
-                self.print_file(path, file, branch_pat + branch_file[index])
-                self.print_tree_sub(path + "/" + file, branch_pat + branch_next[index])
-            else:
-                self.print_file(path, file, branch_pat + branch_file[index])
-
-    def print_tree(self, path: str) -> None:
-        self.print_file("", path, "")
-        self.print_tree_sub(path, "")
+            prefix_kind = 1 if i == len(files) - 1 else 0
+            self.print_file(path, file, prefix + self.prefix_file[prefix_kind])
+            fullpath = os.path.join(path, file)
+            if os.path.isdir(fullpath):
+                self.print_tree_sub(fullpath, prefix + self.prefix_indent[prefix_kind])
 
     def execute(self) -> None:
-        directories = []
-        if len(self.args.DIRECTORIES) == 0:
-            directories = [ "." ]
-        else:
-            directories = self.args.DIRECTORIES
-        for path in directories:
-            self.print_tree(path)
+        for path in self.args.DIRECTORIES:
+            self.print_file("", path, "")
+            self.print_tree_sub(path, "")
 
-if __name__ == "__main__":
+
+def main() -> None:
     try:
         ShowTree().execute()
     except KeyboardInterrupt:
         # Suppress stacktraces, but exit with SIGINT
         sys.exit(128 + signal.SIGINT)
+
+
+if __name__ == "__main__":
+    main()
