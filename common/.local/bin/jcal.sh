@@ -116,17 +116,16 @@ download_url() {
 ## 一時ファイルを作成する
 ## テンプレート中の `XXX` を一意情報に置き換える
 ## 生成した一時ファイル名は stdout に出力する
+## ※コマンド置換（サブシェル）で呼び出されることを想定している
 ## usage: make_tempfile TEMPLATE
 make_tempfile() {
-  (
-    now=$(date +'%Y%m%d%H%M%S%z') || return $?
-    uniq_id="${now}_$$"
-    file="${TMPDIR:-/tmp}/${1%%XXX*}${uniq_id}${1#*XXX}"
-    umask 077
-    set -C
-    echo "" > "$file" || return $?
-    echo "$file"
-  )
+  now=$(date +'%Y%m%d%H%M%S%z') || return $?
+  uniq_id="${now}_$$"
+  file="${TMPDIR:-/tmp}/${1%%XXX*}${uniq_id}${1#*XXX}"
+  umask 077
+  set -C
+  echo "" > "$file" || return $?
+  echo "$file"
 }
 
 ## 指定年月の祝日情報を取得する
@@ -134,59 +133,58 @@ make_tempfile() {
 ## 出力形式は `:1:15:21:` のように祝日の日付の前後にコロンがある
 ## ただし、指定の年の祝日がない場合には何も出力しない
 ## 指定の年の祝日はあるが指定の年月の祝日がない場合には `:` を出力する
+## ※コマンド置換（サブシェル）で呼び出されることを想定している
 ## usage: get_holidays YEAR MONTH
 get_holidays() {
-  (
-    year="${1#0}"
-    month="${2#0}"
-    # 祝日情報CSVファイルはシフトJISで保存されているので
-    # 念のためCロケールで読み込む
-    export LANG=C
-    holidays=""
-    has_holidays=0
+  year="${1#0}"
+  month="${2#0}"
+  # 祝日情報CSVファイルはシフトJISで保存されているので
+  # 念のためCロケールで読み込む
+  export LANG=C
+  holidays=""
+  has_holidays=0
 
-    ## 該当のデータをパースして、表示対象年月の場合祝日情報に追加する
-    ## usage: append_holidays_if_needs CSV_ROW
-    append_holidays_if_needs() {
-      holiday="${1%%,*}" # 祝日の名前部分を削除
-      # 2020年以降はスラッシュ区切りの前ゼロなしだが
-      # 2017年3月頃はハイフン区切りの前ゼロありだったので念のため両対応
-      # （2017年2月頃のデータはパースが困難なので対応しない）
-      # ref. <https://okumuralab.org/~okumura/stat/holidays.html>
-      IFS="/-" read -r holiday_year holiday_month holiday_day <<EOF
+  ## 該当のデータをパースして、表示対象年月の場合祝日情報に追加する
+  ## usage: append_holidays_if_needs CSV_ROW
+  append_holidays_if_needs() {
+    holiday="${1%%,*}" # 祝日の名前部分を削除
+    # 2020年以降はスラッシュ区切りの前ゼロなしだが
+    # 2017年3月頃はハイフン区切りの前ゼロありだったので念のため両対応
+    # （2017年2月頃のデータはパースが困難なので対応しない）
+    # ref. <https://okumuralab.org/~okumura/stat/holidays.html>
+    IFS="/-" read -r holiday_year holiday_month holiday_day <<EOF
 $holiday
 EOF
-      holiday_year="${holiday_year#0}"
-      holiday_month="${holiday_month#0}"
-      holiday_day="${holiday_day#0}"
-      if [ "$year" -eq "$holiday_year" ]; then
-        has_holidays=1
-        if [ "$month" -eq "$holiday_month" ]; then
-          holidays="$holidays:$holiday_day"
-        fi
+    holiday_year="${holiday_year#0}"
+    holiday_month="${holiday_month#0}"
+    holiday_day="${holiday_day#0}"
+    if [ "$year" -eq "$holiday_year" ]; then
+      has_holidays=1
+      if [ "$month" -eq "$holiday_month" ]; then
+        holidays="$holidays:$holiday_day"
       fi
-    }
+    fi
+  }
 
-    if [ -r "$path_holidays_csv" ]; then
-      first_line=1
-      while read -r holiday; do
-        if [ "$first_line" -eq 1 ]; then
-          first_line=0
-          continue
-        fi
-        append_holidays_if_needs "$holiday"
-      done < "$path_holidays_csv"
-      if [ -n "$holiday" ]; then
-        # 最終行に改行がないCSVだった場合の対応
-        # ※2025年版には最終行の改行は存在するが念のため
-        append_holidays_if_needs "$holiday"
+  if [ -r "$path_holidays_csv" ]; then
+    first_line=1
+    while read -r holiday; do
+      if [ "$first_line" -eq 1 ]; then
+        first_line=0
+        continue
       fi
-      holidays="$holidays:" # すべての日付の前後に ":" がある状態にする
+      append_holidays_if_needs "$holiday"
+    done < "$path_holidays_csv"
+    if [ -n "$holiday" ]; then
+      # 最終行に改行がないCSVだった場合の対応
+      # ※2025年版には最終行の改行は存在するが念のため
+      append_holidays_if_needs "$holiday"
     fi
-    if [ "$has_holidays" -eq 1 ]; then
-      echo "$holidays"
-    fi
-  )
+    holidays="$holidays:" # すべての日付の前後に ":" がある状態にする
+  fi
+  if [ "$has_holidays" -eq 1 ]; then
+    echo "$holidays"
+  fi
 }
 
 if [ $# -ge 1 ]; then
