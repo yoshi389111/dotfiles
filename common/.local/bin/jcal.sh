@@ -1,28 +1,51 @@
 #!/bin/sh
-# usage: jcal.sh [OPTIONS] [YYYY MM]
-# description: show Japanese calendar for a month.
-# license: (C) 2025 SATO Yoshiyuki. MIT Licensed.
 #
-# 日本のカレンダーを1月分表示します。
-# 年月を指定した場合、その1か月分のカレンダーを表示します。
-# 年月を省略した場合は今月のカレンダーを表示します。
-# 年だけの指定や月だけの指定はできません。
-# 日本でグレゴリオ暦が適用された 1873 年以降が対象です。
+# NAME
+#   jcal.sh - 日本のカレンダーを1月分表示する
 #
-# ホームディレクトリに祝日ファイル(~/.syukujitu.csv)があれば祝日も赤表示する
-# `-u` あるいは `--update` オプションを指定すると祝日情報をダウンロードして更新します。
-# （必要であれば環境変数 `https_proxy` を指定してください）
-# 祝日ファイルがない場合、あるいはあっても指定した年の情報がない場合にはワーニングを表示します。
+# SYNOPSIS
+#   jcal.sh [OPTIONS] [YYYY MM]
+#
+# DESCRIPTION
+#   日本のカレンダーを1月分表示します。
+#   基本的に日曜日は赤で、土曜日は青で表示します。
+#   コマンドライン引数で年(YYYY)と月(MM)を指定した場合、
+#   その1か月分のカレンダーを表示します。
+#   年月を省略した場合は今月のカレンダーを表示します。
+#   年だけ、あるいは月だけの指定はできません。
+#   日本でグレゴリオ暦が適用された 1873 年以降が対象です。
+#
+#   祝日情報CSVファイルがあれば祝日も赤表示します。
+#   祝日情報CSVファイルがない場合、あるいはあっても指定した年の情報がない場合には
+#   ワーニングを表示します。
+#
+# OPTIONS
+#   -u, --update
+#     祝日情報を更新します。
+#     必要な場合、環境変数 `https_proxy` を指定してください。
+#
+# FILES
+#   ~/.local/share/jcal/syukujitsu.csv
+#     祝日情報CSVファイル
+#     内閣府が提供する祝日情報のCSVファイルをダウンロードして保存します。
+#     エンコードはシフトJISのまま保存されます。
+#
+#   /tmp/syukujitu_XXX.csv
+#     祝日情報CSVファイルをダウンロードする場合の一時ファイル。
+#     `XXX` 部分は一意なIDに置き換えられます。
+#
+# SEE ALSO
+#   cal(1), date(1)
+#
+# COPYRIGHT
+#   (C) 2025 SATO Yoshiyuki. MIT Licensed.
 
 set -eu
 prog="$0"
 esc="" # escape
 eval "$(printf 'IFS=" \t\n" esc="\033"')"
-# 前景色赤のANSIエスケープシーケンス
-red="${esc}[31m"
-# 前景色青のANSIエスケープシーケンス
-blue="${esc}[34m"
-# 色リセットのANSIエスケープシーケンス
+red="${esc}[31m" # 前景色赤
+blue="${esc}[34m" # 前景色青
 clr="${esc}[m" # color reset
 
 # 内閣府が提供する祝日情報のCSVファイル
@@ -31,7 +54,8 @@ clr="${esc}[m" # color reset
 # ※フォーマットやファイル名が変更されることがあるので注意(2025年時点の仕様を想定)
 url_holidays_csv='https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv'
 # ホームディレクトリに保存する祝日情報のファイルパス
-path_holidays_csv=~/.syukujitsu.csv
+path_local_share=~/.local/share/jcal
+path_holidays_csv="$path_local_share/syukujitsu.csv"
 
 ## 曜日を計算して変数に代入する
 ## ※グレゴリオ暦で計算します
@@ -107,7 +131,7 @@ make_tempfile() {
 
 ## 指定年月の祝日情報を取得する
 ## 祝日情報は stdout に出力する
-## 形式は `:1:15:21:` のように祝日の日付の前後にコロンがある
+## 出力形式は `:1:15:21:` のように祝日の日付の前後にコロンがある
 ## ただし、指定の年の祝日がない場合には何も出力しない
 ## 指定の年の祝日はあるが指定の年月の祝日がない場合には `:` を出力する
 ## usage: get_holidays YEAR MONTH
@@ -115,12 +139,13 @@ get_holidays() {
   (
     year="${1#0}"
     month="${2#0}"
-    # 祝日ファイルはシフトJISで保存されているので、念のためCロケールで読み込む
+    # 祝日情報CSVファイルはシフトJISで保存されているので
+    # 念のためCロケールで読み込む
     export LANG=C
     holidays=""
     has_holidays=0
 
-    ## 該当のデータをパースして、表示対象年月の場合休日情報に追加する
+    ## 該当のデータをパースして、表示対象年月の場合祝日情報に追加する
     ## usage: append_holidays_if_needs CSV_ROW
     append_holidays_if_needs() {
       holiday="${1%%,*}" # 祝日の名前部分を削除
@@ -167,8 +192,9 @@ EOF
 if [ $# -ge 1 ]; then
   if [ "$1" = "--update" ] || [ "$1" = "-u" ]; then
     # 祝日情報を更新する
-    tempfile=$(make_tempfile "syukujitu_XXX.csv") || exit $?
-    download_url "$url_holidays_csv" "$tempfile" || exit $?
+    mkdir -p "$path_local_share"
+    tempfile=$(make_tempfile "syukujitu_XXX.csv")
+    download_url "$url_holidays_csv" "$tempfile"
     mv "$tempfile" "$path_holidays_csv"
     shift
   fi
