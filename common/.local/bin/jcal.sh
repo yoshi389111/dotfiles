@@ -30,7 +30,7 @@
 #     内閣府が提供する祝日情報のCSVファイルをダウンロードして保存します。
 #     エンコードはシフトJISのまま保存されます。
 #
-#   /tmp/syukujitu_XXX.csv
+#   /tmp/syukujitsu_XXX.csv
 #     祝日情報CSVファイルをダウンロードする場合の一時ファイル。
 #     `XXX` 部分は一意なIDに置き換えられます。
 #
@@ -41,25 +41,61 @@
 #   (C) 2025 SATO Yoshiyuki. MIT Licensed.
 
 set -eu
-prog="$0"
+prog="${0##*/}"
 esc="" # escape
 eval "$(printf 'IFS=" \t\n" esc="\033"')"
-red="${esc}[31m" # 前景色赤
-blue="${esc}[34m" # 前景色青
+#red="${esc}[31m" # 前景色赤
+red="${esc}[38;5;09m" # 前景色赤
+#blue="${esc}[34m" # 前景色青
+blue="${esc}[38;5;33m" # 前景色青
 clr="${esc}[m" # color reset
 
-# 内閣府が提供する祝日情報のCSVファイル
+# 内閣府が提供する祝日情報CSVファイル4
 # ref. <https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html>
 # ref. <https://data.e-gov.go.jp/data/dataset/cao_20190522_0002/resource/d9ad35a5-6c9c-4127-bdbe-aa138fdffe42>
 # ※フォーマットやファイル名が変更されることがあるので注意(2025年時点の仕様を想定)
 url_holidays_csv='https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv'
 # ホームディレクトリに保存する祝日情報のファイルパス
 path_local_share=~/.local/share/jcal
-path_holidays_csv="$path_local_share/syukujitsu.csv"
+path_holidays_csv="${path_local_share}/syukujitsu.csv"
+
+## エラーメッセージ出力して終了する
+## usage: show_error_and_exit
+show_error_and_exit() {
+  echo "" >&2
+  echo "usage: $prog [OPTIONS] [YYYY MM]" >&2
+  echo "options:" >&2
+  echo "  -u, --update  祝日情報を更新する" >&2
+  echo "arguments:" >&2
+  echo "  YYYY          年(1873年以降)" >&2
+  echo "  MM            月(1-12)" >&2
+  exit 1
+}
+
+## 数字かどうかを判定する
+## usage: is_not_number STRING
+is_not_number() {
+  case "$1" in
+    (''|*[!0-9]*) return 0 ;;
+    (*) return 1 ;;
+  esac
+}
+
+## ゼロサプレスを行う
+## usage: suppress_zeros VAR_NAME VALUE
+suppress_zeros() {
+  while [ "${2#0}" != "$2" ] ; do
+    set -- "$1" "${2#0}"
+  done
+  if [ -z "$2" ]; then
+    set -- "$1" 0
+  fi
+  eval "$1=$2"
+}
 
 ## 曜日を計算して変数に代入する
-## ※グレゴリオ暦で計算します
-## ※先発グレゴリオ暦の紀元前は正しく計算できないことがあります
+## - グレゴリオ暦で計算します
+## - 先発グレゴリオ暦の紀元前は正しく計算できないことがあります
 ## usage: calc_weekday VAR_NAME YEAR MONTH DAY
 calc_weekday() {
   if [ "$3" -le 2 ]; then
@@ -73,32 +109,28 @@ calc_weekday() {
 }
 
 ## 指定年月の月末日を計算して変数に代入する
-## ※不正な月のチェックはしません
-## ※グレゴリオ暦で計算します
-## ※先発グレゴリオ暦の紀元前は正しく計算できないことがあります
+## - グレゴリオ暦で計算します
+## - 先発グレゴリオ暦の紀元前は正しく計算できないことがあります
+## - 不正な月のチェックはしていません
 ## usage: calc_lastday VAR_NAME YEAR MONTH
 calc_lastday() {
   case "$3" in
-    (4|6|9|11) set -- "$1" 30 ;; # 小の月
     (2)
-      if [ $(( $2 % 4 )) -ne 0 ]; then
-        set -- "$1" 28 # 平年
-      elif [ $(( $2 % 100 )) -ne 0 ]; then
+      if [ $(( $2 % 4 )) -eq 0 ] && [ $(( $2 % 100 )) -ne 0 ] || [ $(( $2 % 400 )) -eq 0 ]; then
         set -- "$1" 29 # うるう年
-      elif [ $(( $2 % 400 )) -ne 0 ]; then
-        set -- "$1" 28 # 平年
       else
-        set -- "$1" 29 # うるう年
+        set -- "$1" 28 # 平年
       fi
       ;;
+    (4|6|9|11) set -- "$1" 30 ;; # 小の月
     (*) set -- "$1" 31 ;; # 大の月
   esac
   eval "$1=$2"
 }
 
 ## 指定のURLからファイルをダウンロードして保存する
-## usage: download_url URL OUTPUT_FILE
-download_url() {
+## usage: get_from_url URL OUTPUT_FILE
+get_from_url() {
   if command -v curl >/dev/null 2>&1; then
     curl -LsS "$1" -o "$2"
   elif command -v wget >/dev/null 2>&1; then
@@ -114,17 +146,17 @@ download_url() {
 }
 
 ## 一時ファイルを作成する
-## テンプレート中の `XXX` を一意情報に置き換える
-## 生成した一時ファイル名は stdout に出力する
-## ※コマンド置換（サブシェル）で呼び出されることを想定している
+## テンプレート中の `XXX` を一意情報に置き換えます
+## 生成した一時ファイル名は stdout に出力します
+## コマンド置換（サブシェル）で呼び出されることが前提です
 ## usage: make_tempfile TEMPLATE
 make_tempfile() {
-  now=$(date +'%Y%m%d%H%M%S%z') || return $?
+  now=$(date +'%Y%m%d%H%M%S%z')
   uniq_id="${now}_$$"
   file="${TMPDIR:-/tmp}/${1%%XXX*}${uniq_id}${1#*XXX}"
   umask 077
   set -C
-  echo "" > "$file" || return $?
+  : > "$file"
   echo "$file"
 }
 
@@ -133,7 +165,7 @@ make_tempfile() {
 ## 出力形式は `:1:15:21:` のように祝日の日付の前後にコロンがある
 ## ただし、指定の年の祝日がない場合には何も出力しない
 ## 指定の年の祝日はあるが指定の年月の祝日がない場合には `:` を出力する
-## ※コマンド置換（サブシェル）で呼び出されることを想定している
+## コマンド置換（サブシェル）で呼び出されることが前提です
 ## usage: get_holidays YEAR MONTH
 get_holidays() {
   year="${1#0}"
@@ -142,48 +174,37 @@ get_holidays() {
   # 念のためCロケールで読み込む
   export LANG=C
   holidays=""
-  has_holidays=0
-
-  ## 該当のデータをパースして、表示対象年月の場合祝日情報に追加する
-  ## usage: append_holidays_if_needs CSV_ROW
-  append_holidays_if_needs() {
-    holiday="${1%%,*}" # 祝日の名前部分を削除
-    # 2020年以降はスラッシュ区切りの前ゼロなしだが
-    # 2017年3月頃はハイフン区切りの前ゼロありだったので念のため両対応
-    # （2017年2月頃のデータはパースが困難なので対応しない）
-    # ref. <https://okumuralab.org/~okumura/stat/holidays.html>
-    IFS="/-" read -r holiday_year holiday_month holiday_day <<EOF
-$holiday
-EOF
-    holiday_year="${holiday_year#0}"
-    holiday_month="${holiday_month#0}"
-    holiday_day="${holiday_day#0}"
-    if [ "$year" -eq "$holiday_year" ]; then
-      has_holidays=1
-      if [ "$month" -eq "$holiday_month" ]; then
-        holidays="$holidays:$holiday_day"
-      fi
-    fi
-  }
+  has_holidays=""
 
   if [ -r "$path_holidays_csv" ]; then
-    first_line=1
-    while read -r holiday; do
-      if [ "$first_line" -eq 1 ]; then
-        first_line=0
-        continue
+    while read -r holiday || [ "$holiday" ]; do
+      holiday="${holiday%%,*}" # 祝日の名前部分を削除
+      # 2020年以降はスラッシュ区切りの前ゼロなしだが
+      # 2017年3月頃はハイフン区切りの前ゼロありだったので念のため両対応
+      # （2017年2月頃のデータはパースが困難なので対応しない）
+      # ref. <https://okumuralab.org/~okumura/stat/holidays.html>
+      case "$holiday" in
+        ([1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][0-3][1-9]) ;;
+        ([1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][1-9]) ;;
+        ([1-9][0-9][0-9][0-9][-/][1-9][-/][0-3][1-9]) ;;
+        ([1-9][0-9][0-9][0-9][-/][1-9][-/][1-9]) ;;
+        (*) continue ;; # それ以外はスキップ
+      esac
+      IFS="/-" read -r holiday_year holiday_month holiday_day <<EOF
+$holiday
+EOF
+      holiday_month="${holiday_month#0}"
+      holiday_day="${holiday_day#0}"
+      if [ "$year" -eq "$holiday_year" ]; then
+        has_holidays=1
+        if [ "$month" -eq "$holiday_month" ]; then
+          holidays="$holidays:$holiday_day"
+        fi
       fi
-      append_holidays_if_needs "$holiday"
     done < "$path_holidays_csv"
-    if [ -n "$holiday" ]; then
-      # 最終行に改行がないCSVだった場合の対応
-      # ※2025年版には最終行の改行は存在するが念のため
-      append_holidays_if_needs "$holiday"
-    fi
-    holidays="$holidays:" # すべての日付の前後に ":" がある状態にする
   fi
-  if [ "$has_holidays" -eq 1 ]; then
-    echo "$holidays"
+  if [ "$has_holidays" ]; then
+    echo "$holidays:"
   fi
 }
 
@@ -191,56 +212,55 @@ if [ $# -ge 1 ]; then
   if [ "$1" = "--update" ] || [ "$1" = "-u" ]; then
     # 祝日情報を更新する
     mkdir -p "$path_local_share"
-    tempfile=$(make_tempfile "syukujitu_XXX.csv")
-    download_url "$url_holidays_csv" "$tempfile"
+    tempfile=$(make_tempfile "syukujitsu_XXX.csv")
+    get_from_url "$url_holidays_csv" "$tempfile"
     mv "$tempfile" "$path_holidays_csv"
     shift
   fi
 fi
 
-has_err=0
 if [ "$#" -eq 2 ]; then
-  year="${1#0}"
-  month="${2#0}"
-  if [ "$month" -lt 1 ] || [ "$month" -gt 12 ]; then
-    has_err=1
-  fi
+  year="$1"
+  month="$2"
 elif [ "$#" -eq 0 ]; then
+  year_month=$(date '+%Y %m')
   read -r year month <<EOF
-$(date '+%Y %m')
+$year_month
 EOF
-  month="${month#0}"
 else
-  has_err=1
+  echo "error: 引数の指定が正しくありません" >&2
+  show_error_and_exit
 fi
 
-if [ "$has_err" -eq 1 ]; then
-  echo "usage: $prog [OPTIONS] [YYYY MM]" >&2
-  echo "options:" >&2
-  echo "  -u, --update  祝日情報を更新する" >&2
-  echo "arguments:" >&2
-  echo "  YYYY          年(4桁)" >&2
-  echo "  MM            月(1-12)" >&2
-  exit 1
-fi
+suppress_zeros year "$year"
+suppress_zeros month "$month"
 
-if [ "$year" -lt 1873 ]; then
+if is_not_number "$year" ; then
+  echo "error: 年は数値を指定してください" >&2
+  show_error_and_exit
+elif is_not_number "$month" ; then
+  echo "error: 月は数値を指定してください" >&2
+  show_error_and_exit
+elif [ "$month" -lt 1 ] || [ "$month" -gt 12 ]; then
+  echo "error: 月は 1 から 12 の範囲で指定してください" >&2
+  show_error_and_exit
+elif [ "$year" -lt 1873 ]; then
   # 日本では1873年からグレゴリオ暦を採用している
   echo "error: 1873年以降をサポートしています" >&2
-  exit 1
+  show_error_and_exit
 fi
 
-# 月初日の曜日(first_day_wday)計算
+# 月初日の曜日
 first_day_wday=""
 calc_weekday first_day_wday "$year" "$month" 1
 
-# 月末日(last_mday)計算
+# 月末日
 last_mday=""
 calc_lastday last_mday "$year" "$month"
 
 # 祝日情報を取得
 holidays="$(get_holidays "$year" "$month")"
-if [ "$holidays" = "" ]; then
+if [ -z "$holidays" ]; then
   echo "warn: 祝日情報がありません" >&2
 fi
 
@@ -259,25 +279,25 @@ for d in $(seq "${last_mday}"); do
   # 祝日の判定
   case "$holidays" in
     (*:$d:*) is_holiday=1 ;; # 祝日
-    (*)  is_holiday=0 ;; # それ以外
+    (*) is_holiday="" ;; # それ以外
   esac
   # 曜日ごとに色を変えて出力
   case "$wday" in
-    (0) row="$row$red$dd$clr " ;;
+    (0) row="${row}${red}${dd}${clr} " ;; # 日曜日
     (6)
-      if [ "$is_holiday" -eq 1 ]; then
-        row="$row$red$dd$clr" # 祝日(土)
+      if [ "$is_holiday" ]; then
+        row="${row}${red}${dd}${clr}" # 祝日(土)
       else
-        row="$row$blue$dd$clr" # 土曜日
+        row="${row}${blue}${dd}${clr}" # 土曜日
       fi
       echo "$row" # 1週間分を出力
       row=""
       ;;
     (*)
-      if [ "$is_holiday" -eq 1 ]; then
-        row="$row$red$dd$clr " # 祝日(月～金)
+      if [ "$is_holiday" ]; then
+        row="${row}${red}${dd}${clr} " # 祝日(月～金)
       else
-        row="$row$dd " # 平日(月～金)
+        row="${row}${dd} " # 平日(月～金)
       fi
       ;;
   esac
@@ -285,6 +305,6 @@ for d in $(seq "${last_mday}"); do
 done
 
 # 出力未済の行があれば出力
-if [ -n "$row" ]; then
+if [ "$row" ]; then
   echo "$row"
 fi
