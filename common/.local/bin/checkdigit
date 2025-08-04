@@ -2,24 +2,25 @@
 import sys
 import re
 import os
+from typing import List, TextIO
 
 VERSION = "1.0.1"
 START_DATE = "2025-05-21"
 VERSION_DATE = "2025-06-05"
 
 
-def to_digits(digits_str: str):
+def to_digits(digits_str: str) -> List[int]:
     """Convert string to list of ints."""
     return [int(d) for d in digits_str]
 
 
-def print_usage(file):
+def print_usage(file: TextIO):
     basename = os.path.basename(sys.argv[0])
     print('usage: {} DIGITS...'.format(basename), file=file)
     print('Calculates various check digits.', file=file)
 
 
-def print_version(file):
+def print_version(file: TextIO):
     basename = os.path.basename(sys.argv[0])
     print(
         '@(#)$Header: {} {} {}/{} yoshi389111 Exp $'.format(
