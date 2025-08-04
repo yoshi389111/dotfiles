@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ $# -ne 1 || "$1" = "-h" || "$1" = "--help" ]]; then
-  echo "Usage: $(basename $0) { ERROR_NUMBER | ERROR_NAME }" >&2
+  echo "Usage: ${0##*/} { ERROR_NUMBER | ERROR_NAME }" >&2
   exit 1
 
 elif [[ ! ( "$1" =~ ^E[A-Z0-9]+$ || "$1" =~ ^[1-9][0-9]*$ ) ]]
