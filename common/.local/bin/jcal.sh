@@ -41,14 +41,14 @@
 #   (C) 2025 SATO Yoshiyuki. MIT Licensed.
 
 set -eu
-prog="${0##*/}"
+prog=${0##*/}
 esc="" # escape
 eval "$(printf 'IFS=" \t\n" esc="\033"')"
-#red="${esc}[31m" # 前景色赤
-red="${esc}[38;5;09m" # 前景色赤
-#blue="${esc}[34m" # 前景色青
-blue="${esc}[38;5;33m" # 前景色青
-clr="${esc}[m" # color reset
+#red="${esc}[31m" # 前景色:pure赤
+red="${esc}[38;5;09m" # 前景色:赤っぽい色
+#blue="${esc}[34m" # 前景色:pure青
+blue="${esc}[38;5;33m" # 前景色:青っぽい色
+clr="${esc}[m"         # color reset
 
 # 内閣府が提供する祝日情報CSVファイル4
 # ref. <https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html>
@@ -59,16 +59,25 @@ url_holidays_csv='https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv'
 path_local_share=~/.local/share/jcal
 path_holidays_csv="${path_local_share}/syukujitsu.csv"
 
+## 使い方を表示する
+## usage: print_usage
+print_usage() {
+  cat - <<EOD
+usage: $prog [OPTIONS] [YYYY MM]
+options:
+  -u, --update  祝日情報を更新する
+arguments:
+  YYYY          年(1873年以降)
+  MM            月(1-12)
+EOD
+}
+
 ## エラーメッセージ出力して終了する
-## usage: show_error_and_exit
-show_error_and_exit() {
+## usage: error_exit
+error_exit() {
+  echo "error: $1" >&2
   echo "" >&2
-  echo "usage: $prog [OPTIONS] [YYYY MM]" >&2
-  echo "options:" >&2
-  echo "  -u, --update  祝日情報を更新する" >&2
-  echo "arguments:" >&2
-  echo "  YYYY          年(1873年以降)" >&2
-  echo "  MM            月(1-12)" >&2
+  print_usage >&2
   exit 1
 }
 
@@ -76,15 +85,15 @@ show_error_and_exit() {
 ## usage: is_not_number STRING
 is_not_number() {
   case "$1" in
-    (''|*[!0-9]*) return 0 ;;
-    (*) return 1 ;;
+  '' | *[!0-9]*) return 0 ;;
+  *) return 1 ;;
   esac
 }
 
 ## ゼロサプレスを行う
 ## usage: suppress_zeros VAR_NAME VALUE
 suppress_zeros() {
-  while [ "${2#0}" != "$2" ] ; do
+  while [ "${2#0}" != "$2" ]; do
     set -- "$1" "${2#0}"
   done
   if [ -z "$2" ]; then
@@ -100,12 +109,12 @@ suppress_zeros() {
 calc_weekday() {
   if [ "$3" -le 2 ]; then
     # 1月または2月の場合、前年の13月、14月として計算
-    set -- "$1" $(( $2 - 1 )) $(( $3 + 12 )) "$4"
+    set -- "$1" $(($2 - 1)) $(($3 + 12)) "$4"
   fi
   # ツェラーの公式で計算（カッコ内はツェラーの公式(原書)での変数名）
   # $1=変数名, $2=年, $3=月(m), $4=日(q), $5=年の下2桁(K), $6=年の上2桁(J)
-  set -- "$1" "$2" "$3" "$4" $(( $2 % 100 )) $(( $2 / 100 ))
-  eval "$1=$(( ( $4 +(13*( $3 +1))/5+ $5 + $5 /4+ $6 /4+5* $6 +6)%7 ))"
+  set -- "$1" "$2" "$3" "$4" $(($2 % 100)) $(($2 / 100))
+  eval "$1=$((($4 + (13 * ($3 + 1)) / 5 + $5 + $5 / 4 + $6 / 4 + 5 * $6 + 6) % 7))"
 }
 
 ## 指定年月の月末日を計算して変数に代入する
@@ -115,15 +124,19 @@ calc_weekday() {
 ## usage: calc_lastday VAR_NAME YEAR MONTH
 calc_lastday() {
   case "$3" in
-    (2)
-      if [ $(( $2 % 4 )) -eq 0 ] && [ $(( $2 % 100 )) -ne 0 ] || [ $(( $2 % 400 )) -eq 0 ]; then
-        set -- "$1" 29 # うるう年
-      else
-        set -- "$1" 28 # 平年
-      fi
-      ;;
-    (4|6|9|11) set -- "$1" 30 ;; # 小の月
-    (*) set -- "$1" 31 ;; # 大の月
+  2)
+    if [ $(($2 % 4)) -eq 0 ] && [ $(($2 % 100)) -ne 0 ] || [ $(($2 % 400)) -eq 0 ]; then
+      set -- "$1" 29 # うるう年
+    else
+      set -- "$1" 28 # 平年
+    fi
+    ;;
+  4 | 6 | 9 | 11)
+    set -- "$1" 30 # 小の月
+    ;;
+  *)
+    set -- "$1" 31 # 大の月
+    ;;
   esac
   eval "$1=$2"
 }
@@ -151,12 +164,12 @@ get_from_url() {
 ## コマンド置換（サブシェル）で呼び出されることが前提です
 ## usage: make_tempfile TEMPLATE
 make_tempfile() {
-  now=$(date +'%Y%m%d%H%M%S%z')
+  now="$(date +'%Y%m%d%H%M%S%z')" || return $?
   uniq_id="${now}_$$"
   file="${TMPDIR:-/tmp}/${1%%XXX*}${uniq_id}${1#*XXX}"
   umask 077
   set -C
-  : > "$file"
+  : >"$file" || return $?
   echo "$file"
 }
 
@@ -168,8 +181,8 @@ make_tempfile() {
 ## コマンド置換（サブシェル）で呼び出されることが前提です
 ## usage: get_holidays YEAR MONTH
 get_holidays() {
-  year="${1#0}"
-  month="${2#0}"
+  year=$1
+  month=$2
   # 祝日情報CSVファイルはシフトJISで保存されているので
   # 念のためCロケールで読み込む
   export LANG=C
@@ -178,30 +191,29 @@ get_holidays() {
 
   if [ -r "$path_holidays_csv" ]; then
     while read -r holiday || [ "$holiday" ]; do
-      holiday="${holiday%%,*}" # 祝日の名前部分を削除
+      holiday=${holiday%%,*} # 祝日の名前部分を削除
       # 2020年以降はスラッシュ区切りの前ゼロなしだが
       # 2017年3月頃はハイフン区切りの前ゼロありだったので念のため両対応
       # （2017年2月頃のデータはパースが困難なので対応しない）
       # ref. <https://okumuralab.org/~okumura/stat/holidays.html>
       case "$holiday" in
-        ([1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][0-3][1-9]) ;;
-        ([1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][1-9]) ;;
-        ([1-9][0-9][0-9][0-9][-/][1-9][-/][0-3][1-9]) ;;
-        ([1-9][0-9][0-9][0-9][-/][1-9][-/][1-9]) ;;
-        (*) continue ;; # それ以外はスキップ
+      [1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][0-3][1-9]) ;;
+      [1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][1-9]) ;;
+      [1-9][0-9][0-9][0-9][-/][1-9][-/][0-3][1-9]) ;;
+      [1-9][0-9][0-9][0-9][-/][1-9][-/][1-9]) ;;
+      *) continue ;; # それ以外はスキップ
       esac
       IFS="/-" read -r holiday_year holiday_month holiday_day <<EOF
 $holiday
 EOF
-      holiday_month="${holiday_month#0}"
-      holiday_day="${holiday_day#0}"
+      suppress_zeros holiday_month "$holiday_month"
       if [ "$year" -eq "$holiday_year" ]; then
         has_holidays=1
         if [ "$month" -eq "$holiday_month" ]; then
           holidays="$holidays:$holiday_day"
         fi
       fi
-    done < "$path_holidays_csv"
+    done <"$path_holidays_csv"
   fi
   if [ "$has_holidays" ]; then
     echo "$holidays:"
@@ -220,34 +232,29 @@ if [ $# -ge 1 ]; then
 fi
 
 if [ "$#" -eq 2 ]; then
-  year="$1"
-  month="$2"
+  year=$1
+  month=$2
 elif [ "$#" -eq 0 ]; then
   year_month=$(date '+%Y %m')
   read -r year month <<EOF
 $year_month
 EOF
 else
-  echo "error: 引数の指定が正しくありません" >&2
-  show_error_and_exit
+  error_exit "引数の指定が正しくありません"
 fi
 
 suppress_zeros year "$year"
 suppress_zeros month "$month"
 
-if is_not_number "$year" ; then
-  echo "error: 年は数値を指定してください" >&2
-  show_error_and_exit
-elif is_not_number "$month" ; then
-  echo "error: 月は数値を指定してください" >&2
-  show_error_and_exit
+if is_not_number "$year"; then
+  error_exit "年は数値を指定してください"
+elif is_not_number "$month"; then
+  error_exit "月は数値を指定してください"
 elif [ "$month" -lt 1 ] || [ "$month" -gt 12 ]; then
-  echo "error: 月は 1 から 12 の範囲で指定してください" >&2
-  show_error_and_exit
+  error_exit "月は 1 から 12 の範囲で指定してください"
 elif [ "$year" -lt 1873 ]; then
   # 日本では1873年からグレゴリオ暦を採用している
-  echo "error: 1873年以降をサポートしています" >&2
-  show_error_and_exit
+  error_exit "1873年以降をサポートしています" >&2
 fi
 
 # 月初日の曜日
@@ -259,7 +266,7 @@ last_mday=""
 calc_lastday last_mday "$year" "$month"
 
 # 祝日情報を取得
-holidays="$(get_holidays "$year" "$month")"
+holidays=$(get_holidays "$year" "$month")
 if [ -z "$holidays" ]; then
   echo "warn: 祝日情報がありません" >&2
 fi
@@ -278,30 +285,32 @@ for d in $(seq "${last_mday}"); do
   if [ "$d" -le 9 ]; then dd=" $d"; else dd="$d"; fi
   # 祝日の判定
   case "$holidays" in
-    (*:$d:*) is_holiday=1 ;; # 祝日
-    (*) is_holiday="" ;; # それ以外
+  *:$d:*) is_holiday=1 ;; # 祝日
+  *) is_holiday="" ;;     # それ以外
   esac
   # 曜日ごとに色を変えて出力
   case "$wday" in
-    (0) row="${row}${red}${dd}${clr} " ;; # 日曜日
-    (6)
-      if [ "$is_holiday" ]; then
-        row="${row}${red}${dd}${clr}" # 祝日(土)
-      else
-        row="${row}${blue}${dd}${clr}" # 土曜日
-      fi
-      echo "$row" # 1週間分を出力
-      row=""
-      ;;
-    (*)
-      if [ "$is_holiday" ]; then
-        row="${row}${red}${dd}${clr} " # 祝日(月～金)
-      else
-        row="${row}${dd} " # 平日(月～金)
-      fi
-      ;;
+  0)
+    row="${row}${red}${dd}${clr} " # 日曜日
+    ;;
+  6)
+    if [ "$is_holiday" ]; then
+      row="${row}${red}${dd}${clr}" # 祝日(土)
+    else
+      row="${row}${blue}${dd}${clr}" # 土曜日
+    fi
+    echo "$row" # 1週間分を出力
+    row=""
+    ;;
+  *)
+    if [ "$is_holiday" ]; then
+      row="${row}${red}${dd}${clr} " # 祝日(月～金)
+    else
+      row="${row}${dd} " # 平日(月～金)
+    fi
+    ;;
   esac
-  wday=$(( ( wday + 1 ) % 7 ))
+  wday=$(((wday + 1) % 7))
 done
 
 # 出力未済の行があれば出力
