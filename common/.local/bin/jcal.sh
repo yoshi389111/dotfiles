@@ -50,7 +50,7 @@ red="${esc}[38;5;09m" # 前景色:赤っぽい色
 blue="${esc}[38;5;33m" # 前景色:青っぽい色
 clr="${esc}[m"         # color reset
 
-# 内閣府が提供する祝日情報CSVファイル4
+# 内閣府が提供する祝日情報CSVファイル
 # ref. <https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html>
 # ref. <https://data.e-gov.go.jp/data/dataset/cao_20190522_0002/resource/d9ad35a5-6c9c-4127-bdbe-aa138fdffe42>
 # ※フォーマットやファイル名が変更されることがあるので注意(2025年時点の仕様を想定)
@@ -65,23 +65,24 @@ print_usage() {
   cat - <<EOD
 usage: $prog [OPTIONS] [YYYY MM]
 options:
-  -u, --update  祝日情報を更新する
+  -u, --update
+        祝日情報を更新する
 arguments:
-  YYYY          年(1873年以降)
-  MM            月(1-12)
+  YYYY  年(1873年以降)
+  MM    月(1-12)
 EOD
 }
 
 ## エラーメッセージ出力して終了する
 ## usage: error_exit
 error_exit() {
-  echo "error: $1" >&2
-  echo "" >&2
+  printf "error: %s\n\n" "$1" >&2
   print_usage >&2
   exit 1
 }
 
 ## 数字かどうかを判定する
+## 結果は終了コードで返却する
 ## usage: is_not_number STRING
 is_not_number() {
   case "$1" in
@@ -99,7 +100,7 @@ suppress_zeros() {
   if [ -z "$2" ]; then
     set -- "$1" 0
   fi
-  eval "$1=$2"
+  eval "$1=\$2"
 }
 
 ## 曜日を計算して変数に代入する
@@ -117,6 +118,17 @@ calc_weekday() {
   eval "$1=$((($4 + (13 * ($3 + 1)) / 5 + $5 + $5 / 4 + $6 / 4 + 5 * $6 + 6) % 7))"
 }
 
+## うるう年かどうかを判定する
+## 結果は終了コードで返却する
+## usage: is_leap_year YEAR
+is_leap_year() {
+  if [ $(($1 % 4)) -eq 0 ] && [ $(($1 % 100)) -ne 0 ] || [ $(($1 % 400)) -eq 0 ]; then
+    return 0 # うるう年
+  else
+    return 1 # 平年
+  fi
+}
+
 ## 指定年月の月末日を計算して変数に代入する
 ## - グレゴリオ暦で計算します
 ## - 先発グレゴリオ暦の紀元前は正しく計算できないことがあります
@@ -125,20 +137,16 @@ calc_weekday() {
 calc_lastday() {
   case "$3" in
   2)
-    if [ $(($2 % 4)) -eq 0 ] && [ $(($2 % 100)) -ne 0 ] || [ $(($2 % 400)) -eq 0 ]; then
+    if is_leap_year "$2"; then
       set -- "$1" 29 # うるう年
     else
       set -- "$1" 28 # 平年
     fi
     ;;
-  4 | 6 | 9 | 11)
-    set -- "$1" 30 # 小の月
-    ;;
-  *)
-    set -- "$1" 31 # 大の月
-    ;;
+  4 | 6 | 9 | 11) set -- "$1" 30 ;;
+  *) set -- "$1" 31 ;;
   esac
-  eval "$1=$2"
+  eval "$1=\$2"
 }
 
 ## 指定のURLからファイルをダウンロードして保存する
@@ -164,7 +172,7 @@ get_from_url() {
 ## コマンド置換（サブシェル）で呼び出されることが前提です
 ## usage: make_tempfile TEMPLATE
 make_tempfile() {
-  now="$(date +'%Y%m%d%H%M%S%z')" || return $?
+  now=$(date +'%Y%m%d%H%M%S%z') || return $?
   uniq_id="${now}_$$"
   file="${TMPDIR:-/tmp}/${1%%XXX*}${uniq_id}${1#*XXX}"
   umask 077
@@ -197,16 +205,17 @@ get_holidays() {
       # （2017年2月頃のデータはパースが困難なので対応しない）
       # ref. <https://okumuralab.org/~okumura/stat/holidays.html>
       case "$holiday" in
-      [1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][0-3][1-9]) ;;
-      [1-9][0-9][0-9][0-9][-/][0-1][1-9][-/][1-9]) ;;
-      [1-9][0-9][0-9][0-9][-/][1-9][-/][0-3][1-9]) ;;
+      [1-9][0-9][0-9][0-9][-/][0-1][0-9][-/][0-3][0-9]) ;;
+      [1-9][0-9][0-9][0-9][-/][0-1][0-9][-/][1-9]) ;;
+      [1-9][0-9][0-9][0-9][-/][1-9][-/][0-3][0-9]) ;;
       [1-9][0-9][0-9][0-9][-/][1-9][-/][1-9]) ;;
       *) continue ;; # それ以外はスキップ
       esac
-      IFS="/-" read -r holiday_year holiday_month holiday_day <<EOF
+      IFS="/-" read -r holiday_year holiday_month holiday_day <<EOD
 $holiday
-EOF
+EOD
       suppress_zeros holiday_month "$holiday_month"
+      suppress_zeros holiday_day "$holiday_day"
       if [ "$year" -eq "$holiday_year" ]; then
         has_holidays=1
         if [ "$month" -eq "$holiday_month" ]; then
@@ -235,10 +244,10 @@ if [ "$#" -eq 2 ]; then
   year=$1
   month=$2
 elif [ "$#" -eq 0 ]; then
-  year_month=$(date '+%Y %m')
-  read -r year month <<EOF
+  year_month=$(date +'%Y-%m')
+  IFS=- read -r year month <<EOD
 $year_month
-EOF
+EOD
 else
   error_exit "引数の指定が正しくありません"
 fi
@@ -248,13 +257,13 @@ suppress_zeros month "$month"
 
 if is_not_number "$year"; then
   error_exit "年は数値を指定してください"
+elif [ "$year" -lt 1873 ]; then
+  # 日本では1873年からグレゴリオ暦を採用している
+  error_exit "1873年以降のみをサポートしています" >&2
 elif is_not_number "$month"; then
   error_exit "月は数値を指定してください"
 elif [ "$month" -lt 1 ] || [ "$month" -gt 12 ]; then
-  error_exit "月は 1 から 12 の範囲で指定してください"
-elif [ "$year" -lt 1873 ]; then
-  # 日本では1873年からグレゴリオ暦を採用している
-  error_exit "1873年以降をサポートしています" >&2
+  error_exit "月は1から12の範囲で指定してください"
 fi
 
 # 月初日の曜日
