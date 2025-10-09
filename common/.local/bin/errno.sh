@@ -5,7 +5,7 @@ if [[ $# -ne 1 || "$1" = "-h" || "$1" = "--help" ]]; then
   exit 1
 
 elif [[ ! ("$1" =~ ^E[A-Z0-9]+$ || "$1" =~ ^[1-9][0-9]*$) ]]; then
-  echo "illegal argument." >&2
+  echo "invalid argument." >&2
   exit 1
 
 elif ! find /usr/include -name 'errno*.h' \
