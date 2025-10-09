@@ -46,12 +46,12 @@ set -eu
 script_name=${0##*/}
 esc=""
 eval "$(printf 'IFS=" \t\n" esc="\033"')"
-red="${esc}[38;5;09m"                         # 前景色:赤
-rev_red="${esc}[30m${esc}[48;5;09m"   # 背景色:赤
-blue="${esc}[38;5;33m"                        # 前景色:青
-rev_blue="${esc}[30m${esc}[48;5;33m"  # 背景色:青
-rev_white="${esc}[30m${esc}[47;5;15m" # 背景色:白
-reset_color="${esc}[m"                        # color reset
+fg_red="${esc}[38;5;09m"
+bg_red="${esc}[30m${esc}[48;5;09m"
+fg_blue="${esc}[38;5;33m"
+bg_blue="${esc}[30m${esc}[48;5;33m"
+bg_white="${esc}[30m${esc}[47;5;15m"
+reset_color="${esc}[m"
 
 # 内閣府が提供する祝日情報CSVファイル
 # ref. <https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html>
@@ -62,7 +62,7 @@ url_holidays_csv='https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv'
 path_local_share=~/.local/share/jcal
 path_holidays_csv="${path_local_share}/syukujitsu.csv"
 
-# 使い方を表示する
+# 使い方を表示
 # usage: print_usage
 print_usage() {
   cat - <<EOD
@@ -76,7 +76,7 @@ arguments:
 EOD
 }
 
-# エラーメッセージ出力して終了する
+# エラーメッセージ出力して終了
 # usage: error_exit [MESSAGE]
 error_exit() {
   [ $# -eq 1 ] && printf "error: %s\n\n" "$1" >&2
@@ -84,8 +84,8 @@ error_exit() {
   exit 1
 }
 
-# 数字であるかを判定する
-# 結果は終了コードで返却する
+# 数字の判定
+# 結果は終了コードで返却します
 # usage: is_number <STRING>
 is_number() {
   case "$1" in
@@ -94,7 +94,7 @@ is_number() {
   esac
 }
 
-# ゼロサプレスを行う
+# ゼロサプレス
 # usage: remove_leading_zeros <VAR_NAME> <VALUE>
 remove_leading_zeros() {
   [ -z "$2" ] && return
@@ -105,33 +105,34 @@ remove_leading_zeros() {
   eval "$1=\$2"
 }
 
-# 曜日を計算して変数に代入する
+# 曜日の計算
 # - グレゴリオ暦で計算します
 # - 先発グレゴリオ暦の紀元前は正しく計算できないことがあります
 # usage: get_weekday <VAR_NAME> <YEAR> <MONTH> <DAY>
 get_weekday() {
-  if [ "$3" -le 2 ]; then
-    # 1月または2月の場合、前年の13月、14月として計算
-    set -- "$1" $(($2 - 1)) $(($3 + 12)) "$4"
-  fi
+  # 1月または2月の場合、前年の13月、14月として計算
+  [ "$3" -le 2 ] && set -- "$1" $(($2 - 1)) $(($3 + 12)) "$4"
   # ツェラーの公式で計算（カッコ内はツェラーの公式(原書)での変数名）
   # $1=変数名, $2=年, $3=月(m), $4=日(q), $5=年の下2桁(K), $6=年の上2桁(J)
   set -- "$1" "$2" "$3" "$4" $(($2 % 100)) $(($2 / 100))
   eval "$1=$((($4 + (13 * ($3 + 1)) / 5 + $5 + $5 / 4 + $6 / 4 + 5 * $6 + 6) % 7))"
 }
 
-# うるう年かどうかを判定する
-# 結果は終了コードで返却する
+# うるう年の判定
+# 結果は終了コードで返却します
+# - グレゴリオ暦で計算します
+# - 先発グレゴリオ暦の紀元前は正しく計算できないことがあります
 # usage: is_leap_year <YEAR>
 is_leap_year() {
-  if [ $(($1 % 4)) -eq 0 ] && [ $(($1 % 100)) -ne 0 ] || [ $(($1 % 400)) -eq 0 ]; then
-    return 0 # うるう年
-  else
-    return 1 # 平年
+  if [ $(($1 % 4)) -eq 0 ]; then
+    if [ $(($1 % 100)) -ne 0 ] || [ $(($1 % 400)) -eq 0 ]; then
+      return 0 # うるう年
+    fi
   fi
+  return 1 # 平年
 }
 
-# 指定年月の月末日を計算して変数に代入する
+# 月末日の計算
 # - グレゴリオ暦で計算します
 # - 先発グレゴリオ暦の紀元前は正しく計算できないことがあります
 # - 不正な月のチェックはしていません
@@ -151,7 +152,7 @@ get_last_day_of_month() {
   eval "$1=\$2"
 }
 
-# 指定のURLからファイルをダウンロードして保存する
+# 指定のURLからファイルをダウンロード
 # usage: download_file <URL> <OUTPUT_FILE>
 download_file() {
   if command -v curl >/dev/null 2>&1; then
@@ -168,7 +169,7 @@ download_file() {
   fi
 }
 
-# 一時ファイルを作成する
+# 一時ファイルの作成
 # テンプレート中の `XXX` を一意情報に置き換えます
 # 生成した一時ファイル名は stdout に出力します
 # コマンド置換（サブシェル）で呼び出されることが前提です
@@ -183,7 +184,7 @@ create_tempfile() {
   echo "$file"
 }
 
-# 文字列を IFS で分割して変数に代入する
+# 文字列を IFS で分割
 # usage: split_string <STRING> <VAR_NAME>...
 split_string() {
   [ $# -lt 2 ] && return 1
@@ -192,12 +193,12 @@ split_string() {
 EOD"
 }
 
-# 指定年月の祝日情報を取得する
-# 祝日情報は stdout に出力する
-# 出力形式は `:1:15:21:` のように祝日の日付の前後にコロンがある
-# ただし、指定の年の祝日がない場合には何も出力しない
-# 指定の年の祝日はあるが指定の年月の祝日がない場合には `:` を出力する
-# コマンド置換（サブシェル）で呼び出されることが前提です
+# 祝日情報の取得
+# 指定された年月の祝日情報を stdout に出力します
+# 出力形式は `:1:15:21:` のように祝日の日付の前後にコロンがあります
+# ただし、指定の年の祝日がない場合には何も出力しません。
+# 指定の年の祝日はあるが指定の年月の祝日がない場合には `:` を出力します。
+# コマンド置換（サブシェル）で呼び出されることが前提です。
 # usage: get_holidays_for_month <YEAR> <MONTH>
 get_holidays_for_month() {
   year=$1
@@ -294,7 +295,7 @@ fi
 
 # カレンダーの年月と曜日を出力
 echo "     ${year}年${month}月"
-echo "${red}日${reset_color} 月 火 水 木 金 ${blue}土${reset_color}"
+echo "${fg_red}日${reset_color} 月 火 水 木 金 ${fg_blue}土${reset_color}"
 
 # 月初日までの空白(曜日1つあたり3個のスペース)
 line=$(printf "%$((weekday_of_first_day * 3))s" "")
@@ -302,7 +303,7 @@ line=$(printf "%$((weekday_of_first_day * 3))s" "")
 # 初日から月末までの日付を出力
 weekday=$weekday_of_first_day
 for d in $(seq "$last_day_of_month"); do
-  # 出力用日付を2桁(前ゼロなし)に揃える
+  # 出力用日付(`dd`)を2桁(前ゼロなし)に揃える
   if [ "$d" -le 9 ]; then dd=" $d"; else dd="$d"; fi
   # 祝日の判定
   case "$holidays" in
@@ -310,25 +311,29 @@ for d in $(seq "$last_day_of_month"); do
   *) is_holiday="" ;;     # それ以外
   esac
   # 曜日ごとに色を変えて出力
-  if [ "$year" -eq "$current_year" ] && [ "$month" -eq "$current_month" ] && [ "$d" -eq "$current_day" ]; then
+  if [ "$year" -eq "$current_year" ] &&
+    [ "$month" -eq "$current_month" ] &&
+    [ "$d" -eq "$current_day" ]; then
+
     if [ "$weekday" -eq 0 ] || [ "$is_holiday" ]; then
-      line="${line}${rev_red}${dd}${reset_color}" # 今日(日曜日 or 祝日)
+      line="${line}${bg_red}${dd}${reset_color}" # 今日(日曜日 or 祝日)
     elif [ "$weekday" -eq 6 ]; then
-      line="${line}${rev_blue}${dd}${reset_color}" # 今日(土曜日)
+      line="${line}${bg_blue}${dd}${reset_color}" # 今日(土曜日)
     else
-      line="${line}${rev_white}${dd}${reset_color}" # 今日(平日)
+      line="${line}${bg_white}${dd}${reset_color}" # 今日(平日)
     fi
   else
     if [ "$weekday" -eq 0 ] || [ "$is_holiday" ]; then
-      line="${line}${red}${dd}${reset_color}" # 日曜日 or 祝日
+      line="${line}${fg_red}${dd}${reset_color}" # 日曜日 or 祝日
     elif [ "$weekday" -eq 6 ]; then
-      line="${line}${blue}${dd}${reset_color}" # 土曜日
+      line="${line}${fg_blue}${dd}${reset_color}" # 土曜日
     else
       line="${line}${dd}" # 平日
     fi
   fi
   if [ "$weekday" -eq 6 ]; then
-    echo "$line" # 1週間分を出力
+    # 土曜日は1週間分を出力
+    echo "$line"
     line=""
   else
     line="$line "
