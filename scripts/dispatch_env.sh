@@ -1,32 +1,35 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # usage: dispatch_env.sh SCRIPT_PATH
 
-SCRIPT_PATH="$1"
-BASE_DIR="$(cd $(dirname $0)/.. && pwd)"
-SYS_NAME="$(uname -s)"
-REL_NAME="$(uname -r)"
+set -eu
 
-"$SCRIPT_PATH" "$BASE_DIR/common"
+SCRIPT_PATH=$(realpath "$1")
+SCRIPT_DIR=${SCRIPT_PATH%/*}
+PROJECT_DIR=${SCRIPT_DIR%/*}
+SYS_NAME=$(uname -s)
+REL_NAME=$(uname -r)
 
-if [[ "$SYS_NAME" = 'Darwin' && -d "$BASE_DIR/mac" ]]; then
+"$SCRIPT_PATH" "$PROJECT_DIR/common"
+
+if [[ "$SYS_NAME" = 'Darwin' && -d "$PROJECT_DIR/mac" ]]; then
   # MacOS
-  "$SCRIPT_PATH" "$BASE_DIR/mac"
+  "$SCRIPT_PATH" "$PROJECT_DIR/mac"
 
 elif [[ "$SYS_NAME" = 'Linux' ]]; then
   # Linux
 
-  if [[ -d "$BASE_DIR/linux" ]]; then
+  if [[ -d "$PROJECT_DIR/linux" ]]; then
     # General Linux
-    "$SCRIPT_PATH" "$BASE_DIR/linux"
+    "$SCRIPT_PATH" "$PROJECT_DIR/linux"
   fi
 
-  if [[ "$REL_NAME" == *microsoft-standard-WSL2 && -d "$BASE_DIR/wsl2" ]]; then
+  if [[ "$REL_NAME" == *microsoft-standard-WSL2 && -d "$PROJECT_DIR/wsl2" ]]; then
     # WSL2
-    "$SCRIPT_PATH" "$BASE_DIR/wsl2"
+    "$SCRIPT_PATH" "$PROJECT_DIR/wsl2"
 
-  elif [[ "$REL_NAME" == *Microsoft && -d "$BASE_DIR/wsl1" ]]; then
+  elif [[ "$REL_NAME" == *Microsoft && -d "$PROJECT_DIR/wsl1" ]]; then
     # WSL1
-    "$SCRIPT_PATH" "$BASE_DIR/wsl1"
+    "$SCRIPT_PATH" "$PROJECT_DIR/wsl1"
 
   else
     : # other Linux
@@ -39,9 +42,9 @@ elif [[ "$SYS_NAME" = 'Linux' ]]; then
   fi
 
 
-elif [[ "$SYS_NAME" == MINGW* && -d "$BASE_DIR/mingw" ]]; then
+elif [[ "$SYS_NAME" == MINGW* && -d "$PROJECT_DIR/mingw" ]]; then
   # MinGW (e.g. git for windows)
-  "$SCRIPT_PATH" "$BASE_DIR/mingw"
+  "$SCRIPT_PATH" "$PROJECT_DIR/mingw"
 
 else
   : # other unix

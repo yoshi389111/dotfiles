@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 
 # for shell history
 HISTCONTROL=ignoreboth
@@ -26,14 +27,17 @@ alias la='ls -A'
 alias l='ls -CF'
 
 if [ -f ~/.bash_aliases ]; then
+  # shellcheck source=/dev/null
   . ~/.bash_aliases
 fi
 
 # for bash-completion
 if ! shopt -oq posix; then
   if [ -f /usr/share/bash-completion/bash_completion ]; then
+    # shellcheck source=/dev/null
     . /usr/share/bash-completion/bash_completion
   elif [ -f /etc/bash_completion ]; then
+    # shellcheck source=/dev/null
     . /etc/bash_completion
   fi
 fi
@@ -49,9 +53,16 @@ if [ -d '/usr/local/go/bin' ]; then
   PATH="$PATH:$(go env GOPATH)/bin"
 fi
 
+# for dotnet
+if [ -d ~/.dotnet ]; then
+  export DOTNET_ROOT=~/.dotnet
+  PATH="$PATH:$DOTNET_ROOT"
+fi
+
 
 # for secret info
 if [ -f ~/.bashrc.private ]; then
+  # shellcheck source=/dev/null
   . ~/.bashrc.private
 fi
 
@@ -100,7 +111,8 @@ __deduplication_path() {
   IFS="$ifs"
   echo "$paths"
 }
-export PATH="$(__deduplication_path "$PATH")"
+PATH="$(__deduplication_path "$PATH")"
+export PATH
 unset -f __deduplication_path
 
 # prompt

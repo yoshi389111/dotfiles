@@ -1,27 +1,21 @@
-#!/bin/bash
-# usage: update_env.sh TARGET_DIR
+#!/usr/bin/env bash
+# usage: update_env.sh SRC_DIR
 
-TARGET_DIR="$1"
+set -eu
 
-create_link() {
-  mkdir -p ~/"$(dirname $1)"
-  rm -f ~/"$1"
-  echo ln -s "$TARGET_DIR/$1" ~/"$1"
-  ln -s "$TARGET_DIR/$1" ~/"$1"
-}
+SRC_DIR=$1
+DST_DIR=~
 
-for FILE in $(cd "$TARGET_DIR"; find ./ -type f -name '.*'); do
-  create_link "${FILE#./}"
-done
-
-if [ -d "$TARGET_DIR"/.git_template ]; then
-  for FILE in $(cd "$TARGET_DIR"; find .git_template -type f); do
-    create_link "$FILE"
+find "$SRC_DIR/" -type f |
+  while IFS= read -r FILE; do
+    FILE=${FILE#"${SRC_DIR}/"}
+    mkdir -p "$DST_DIR/${FILE%/*}" 2>/dev/null || true
+    case "$FILE" in
+    *.sh) DST_FILE="${FILE%.sh}" ;;
+    *.py) DST_FILE="${FILE%.py}" ;;
+	*.pl) DST_FILE="${FILE%.pl}" ;;
+    *) DST_FILE="$FILE" ;;
+    esac
+    echo "ln -sf $SRC_DIR/$FILE $DST_DIR/$DST_FILE"
+    ln -sf "$SRC_DIR/$FILE" "$DST_DIR/$DST_FILE"
   done
-fi
-
-if [ -d "$TARGET_DIR"/.local ]; then
-  for FILE in $(cd "$TARGET_DIR"; find .local -type f); do
-    create_link "$FILE"
-  done
-fi
