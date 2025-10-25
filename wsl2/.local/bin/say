@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # command to speak for WSL/PowerShell
 
 # search powershell
