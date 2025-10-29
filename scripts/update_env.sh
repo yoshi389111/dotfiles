@@ -11,9 +11,9 @@ find "$SRC_DIR/" -type f |
     FILE=${FILE#"${SRC_DIR}/"}
     mkdir -p "$DST_DIR/${FILE%/*}" 2>/dev/null || true
     case "$FILE" in
-    *.sh) DST_FILE="${FILE%.sh}" ;;
-    *.py) DST_FILE="${FILE%.py}" ;;
-	*.pl) DST_FILE="${FILE%.pl}" ;;
+    .local/bin/*.sh) DST_FILE="${FILE%.sh}" ;;
+    .local/bin/*.py) DST_FILE="${FILE%.py}" ;;
+	  .local/bin/*.pl) DST_FILE="${FILE%.pl}" ;;
     *) DST_FILE="$FILE" ;;
     esac
     echo "ln -sf $SRC_DIR/$FILE $DST_DIR/$DST_FILE"
