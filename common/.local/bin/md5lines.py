@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 # md5lines.py - Compute MD5 hashes for lines in a file
 # Usage: md5lines.py [file1 file2 ...]
+
+# Others have implemented similar functionality in various ways, such as:
+#
+# ```shell
+# while IFS= read -r LINE ; do printf "%s\n" "$(printf "%s" "$LINE" | md5sum) $LINE" ; done < INPUTFILE
+# ```
+#
+# ```perl
+# perl -MDigest::MD5=md5_hex -ne 'chomp; print md5_hex($_)," $_\n"' < INPUTFILE
+# ```
+
 import sys
 import hashlib
 from typing import TextIO
