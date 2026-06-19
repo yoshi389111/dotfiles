@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
+
 # Change file timestamp to author date.
 
 git ls-files | while read -r FILE; do

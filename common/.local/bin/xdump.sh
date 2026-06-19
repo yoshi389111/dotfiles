@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: 0BSD
+
 # A simple hexdump script that shows the offset, hex bytes, and ASCII representation.
 
 set -euo pipefail

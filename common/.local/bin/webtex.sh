@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
+
 # convert latex to svg
 
 tex="$1"

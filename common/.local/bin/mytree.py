@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2023 yoshi389111
 
 # Show directory tree
-# (C) 2023 SATO Yoshiyuki
-# This software is released under the MIT License.
-# https://opensource.org/licenses/mit-license.php
 
 import argparse
 import datetime

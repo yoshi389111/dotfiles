@@ -2,6 +2,8 @@
 'di';
 'ig00';
 #!/usr/bin/perl
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2002 yoshi389111
 ########################################################################
 # 指定したファイルのサイズ・日時を表示するコマンド
 #    2002-02-20 v1.0 by yoshi389111

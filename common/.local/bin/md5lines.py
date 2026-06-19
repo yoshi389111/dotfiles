@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: 0BSD
+
 # md5lines.py - Compute MD5 hashes for lines in a file
 # Usage: md5lines.py [file1 file2 ...]
 

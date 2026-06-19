@@ -1,5 +1,8 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
+
 # usage: git fetch-pr PULL-REQUEST-ID
+
 
 if [ "$#" -ne 1 ]; then
   echo "usage: git fetch-pr PULL-REQUEST-ID" >&2

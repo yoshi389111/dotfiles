@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
 
 P_CPU=$( grep -F 'physical id' /proc/cpuinfo | sort -u | wc -l )
 CORES=$( grep -F 'cpu cores' /proc/cpuinfo | sort -u | sed 's/.*: //' )

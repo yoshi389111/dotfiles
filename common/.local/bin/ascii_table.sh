@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
+
+# Print an ASCII table.
 
 cat <<'EOF'
     +00    +10     +20     +30     +40     +50     +60      +70
