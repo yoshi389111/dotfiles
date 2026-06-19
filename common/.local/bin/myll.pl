@@ -3,10 +3,10 @@
 'ig00';
 #!/usr/bin/perl
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2002 yoshi389111
+# SPDX-FileCopyrightText: 2002 SATO Yoshiyuki
 ########################################################################
 # 指定したファイルのサイズ・日時を表示するコマンド
-#    2002-02-20 v1.0 by yoshi389111
+#    2002-02-20 v1.0 by yoshi389111(SATO Yoshiyuki)
 #    2003-04-04 v1.1 カレントディレクトリの場合、ファイル名でソートした
 #    2003-08-08 v1.2 ll コマンドに似せて、出力項目を増やした
 #

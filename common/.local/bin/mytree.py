@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2023 yoshi389111
+# SPDX-FileCopyrightText: 2023 SATO Yoshiyuki
 
 # Show directory tree
 
