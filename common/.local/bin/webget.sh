@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
+
 # download a file from a URL
 # usage: webget.sh <URL> <OUTPUT_FILE>
 

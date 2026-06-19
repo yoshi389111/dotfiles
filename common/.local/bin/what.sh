@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: 0BSD
+
 # This is a simplified implementation of the SCCS `what` command.
 # e.g. "@(#) foo.c 1.1 2023/01/01"
 

@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: 0BSD
+
 # Rename file extensions for given source files
 # Usage: chext.sh <old-ext> <new-ext> <source-files...>
 # Example:

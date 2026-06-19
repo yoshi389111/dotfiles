@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: 0BSD
+
 # command to speak for WSL/PowerShell
 
 # search powershell

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: 0BSD
+
 # This is a simplified implementation of the RCS `ident` command.
 # e.g. "$Id: foo.c,v 1.1 2023/01/01 12:34:56 user Exp $"
 

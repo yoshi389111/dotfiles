@@ -1,5 +1,7 @@
 #!/bin/sh
-#
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2025 SATO Yoshiyuki
+
 # NAME
 #   jcal.sh - 日本のカレンダーを1月分表示する
 #
@@ -38,9 +40,6 @@
 #
 # SEE ALSO
 #   cal(1), date(1)
-#
-# COPYRIGHT
-#   (C) 2025 SATO Yoshiyuki. MIT Licensed.
 
 set -eu
 script_name=${0##*/}

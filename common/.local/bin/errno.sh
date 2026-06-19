@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: 0BSD
+
+# Get errno name or number.
 
 if [[ $# -ne 1 || "$1" = "-h" || "$1" = "--help" ]]; then
   echo "Usage: ${0##*/} { ERROR_NUMBER | ERROR_NAME }" >&2

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: 0BSD
+
 import sys
 import re
 import os
